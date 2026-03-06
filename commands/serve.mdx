@@ -1,0 +1,172 @@
+---
+title: "ahh serve"
+description: "Serve the current directory over HTTP with automatic tunneling"
+---
+
+## Overview
+
+The `serve` command starts a local HTTP server that serves files from the current directory and automatically creates a Cloudflare tunnel to make it accessible over the internet. It's perfect for quickly sharing static files, websites, or assets.
+
+## Syntax
+
+```bash
+ahh serve [--port <port>]
+```
+
+## Parameters
+
+<ParamField path="port" type="number" default="8000">
+  The port number to run the HTTP server on.
+  
+  **Aliases:** `-p`
+</ParamField>
+
+## Usage Examples
+
+<CodeGroup>
+```bash Default Port
+# Serve on default port 8000
+ahh serve
+```
+
+```bash Custom Port
+# Serve on port 3000
+ahh serve --port 3000
+
+# Using short alias
+ahh serve -p 9000
+```
+
+```bash Real-World Examples
+# Share a static website
+cd my-website
+ahh serve
+
+# Share files from a specific directory
+cd ~/Documents/presentations
+ahh serve -p 8080
+
+# Serve a built React app
+cd build
+ahh serve
+```
+</CodeGroup>
+
+## Output
+
+The command displays:
+- A spinner: "Starting server, this may take a second..."
+- The public tunnel URL
+- A QR code for the URL
+
+```bash Example Output
+Starting server, this may take a second...
+URL: https://random-subdomain.trycloudflare.com
+[QR CODE]
+```
+
+## How It Works
+
+### Server Behavior
+
+The HTTP server:
+1. Serves files from the current working directory
+2. Enables CORS for cross-origin requests
+3. Automatically serves `index.html` for directory requests
+4. Returns appropriate MIME types based on file extensions
+5. Handles path traversal attacks by validating paths
+
+### Directory Index
+
+When accessing a directory (URL ending with `/`):
+- Checks for `index.html` in that directory
+- Serves `index.html` if it exists
+- Returns 404 if no index file is found
+
+### Security
+
+<Warning>
+  The server prevents directory traversal attacks by validating that requested paths stay within the current working directory.
+</Warning>
+
+The server:
+- Removes `..` segments from paths
+- Validates all paths start with the current directory
+- Returns 403 Forbidden for invalid paths
+
+## Error Handling
+
+### File Not Found (404)
+Returned when a requested file doesn't exist:
+```
+Not Found
+```
+
+### Forbidden (403)
+Returned when attempting to access paths outside the served directory:
+```
+Forbidden
+```
+
+### Internal Server Error (500)
+Returned for unexpected server errors:
+```
+Internal Server Error
+```
+
+## Technical Details
+
+### Parallel Execution
+
+The command runs two operations in parallel:
+1. Starting the local HTTP server on the specified port
+2. Creating a Cloudflare tunnel to that port
+
+This ensures the server is ready when the tunnel connects.
+
+### MIME Type Detection
+
+The server automatically detects and sets correct MIME types:
+- `.html` → `text/html`
+- `.css` → `text/css`
+- `.js` → `application/javascript`
+- `.json` → `application/json`
+- `.png` → `image/png`
+- Unknown types → `application/octet-stream`
+
+### Implementation
+
+Built using:
+- **Elysia** - Fast HTTP server framework
+- **@elysiajs/cors** - CORS middleware
+- **mime/lite** - MIME type detection
+
+## Return Value
+
+The underlying `createSimpleServer()` function returns:
+```typescript
+{
+  port: number,    // The port the server is running on
+  kill: () => void // Function to stop the server
+}
+```
+
+## Notes
+
+<Note>
+  The server continues running until you terminate the process with Ctrl+C.
+</Note>
+
+<Note>
+  All files in the current directory and subdirectories become accessible via the public URL. Be careful not to expose sensitive files.
+</Note>
+
+<Note>
+  For rate limiting information about Cloudflare tunnels, see the [tunnel command](/commands/tunnel#error-handling).
+</Note>
+
+## Related Commands
+
+- [tunnel](/commands/tunnel) - Create a tunnel without serving files
+- [webhook](/commands/webhook) - Start a webhook inspection server
+- [qr](/commands/qr) - Generate QR codes for URLs

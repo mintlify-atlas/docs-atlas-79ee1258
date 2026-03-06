@@ -1,0 +1,237 @@
+---
+title: "ahh qr"
+description: "Generate and display QR codes from stdin content"
+---
+
+## Overview
+
+The `qr` command reads content from standard input (stdin) and generates a QR code that can be scanned with mobile devices. It's perfect for quickly sharing URLs, text, or data between devices.
+
+## Syntax
+
+```bash
+echo "content" | ahh qr
+```
+
+## Parameters
+
+This command takes no parameters. It reads all input from stdin.
+
+## Usage Examples
+
+<CodeGroup>
+```bash Share URLs
+# Share a website URL
+echo "https://example.com" | ahh qr
+
+# Share a local tunnel URL
+ahh tunnel -p 3000 | grep "Tunnel URL" | cut -d' ' -f3 | ahh qr
+
+# Share a GitHub repository
+echo "https://github.com/user/repo" | ahh qr
+```
+
+```bash Share Text
+# Share a message
+echo "Hello, scan this!" | ahh qr
+
+# Share credentials (be careful!)
+echo "wifi:SSID:MyNetwork;PASS:MyPassword;;" | ahh qr
+
+# Share contact info (vCard format)
+echo "BEGIN:VCARD
+VERSION:3.0
+FN:John Doe
+END:VCARD" | ahh qr
+```
+
+```bash Share Configuration
+# Share API endpoint
+echo "https://api.example.com/v1/data" | ahh qr
+
+# Share connection string
+echo "mongodb://localhost:27017/mydb" | ahh qr
+```
+
+```bash Generate from Files
+# Share file content
+cat url.txt | ahh qr
+
+# Share first line of file
+head -n 1 links.txt | ahh qr
+```
+</CodeGroup>
+
+## Output
+
+The command displays a QR code in the terminal using ASCII/Unicode characters:
+
+```
+█████████████████████████████
+██ ▄▄▄▄▄ █▀█ █▄▄▀▀▀█ ▄▄▄▄▄ ██
+██ █   █ █▀▀▀█ ▄█▀█ █   █ ██
+██ █▄▄▄█ █▀ █▀▀ ▀▀▄ █▄▄▄█ ██
+[... QR code continues ...]
+```
+
+## How It Works
+
+### QR Code Generation
+
+1. Reads all content from stdin
+2. Generates a QR code containing the content
+3. Renders the QR code to the terminal
+4. Can be scanned by any QR code reader app
+
+### Data Encoding
+
+The QR code can encode:
+- Plain text (up to ~4,296 characters)
+- URLs (automatically recognized by QR readers)
+- Contact information (vCard format)
+- WiFi credentials (special format)
+- Any other text-based data
+
+## Common Use Cases
+
+### Sharing Tunnel URLs
+
+The `tunnel` and `serve` commands automatically generate QR codes for their URLs, but you can also manually generate them:
+
+```bash
+# Get tunnel URL and create QR
+ahh tunnel -p 8000
+# QR code is automatically displayed
+```
+
+### WiFi Sharing
+
+Share WiFi credentials that mobile devices can scan to connect:
+
+```bash
+echo "WIFI:T:WPA;S:MyNetwork;P:MyPassword;;" | ahh qr
+```
+
+Format:
+- `T`: Security type (WPA, WEP, or blank for open)
+- `S`: Network SSID
+- `P`: Password
+
+### Quick URL Sharing
+
+```bash
+# Share a local development server
+echo "http://192.168.1.100:3000" | ahh qr
+
+# Share a deployment URL
+echo "https://my-app.vercel.app" | ahh qr
+```
+
+### Contact Information
+
+vCard format for contact sharing:
+
+```bash
+cat <<EOF | ahh qr
+BEGIN:VCARD
+VERSION:3.0
+FN:John Doe
+TEL:+1234567890
+EMAIL:john@example.com
+END:VCARD
+EOF
+```
+
+## Technical Details
+
+### Implementation
+
+The command:
+- Uses a QR code generation library
+- Renders using terminal-compatible characters
+- Outputs directly to stdout
+- Supports all standard QR code error correction levels
+
+### Character Limitations
+
+<Warning>
+  QR codes have size limitations based on version and error correction:
+  - Version 1: ~25 characters
+  - Version 10: ~400 characters
+  - Version 40 (max): ~4,296 characters
+  
+  Longer content produces larger, more complex QR codes that may be harder to scan.
+</Warning>
+
+### Terminal Display
+
+The QR code is rendered using:
+- Unicode block characters for better definition
+- Black and white contrast
+- Automatic sizing based on content length
+
+## Error Handling
+
+### No Input
+
+If run without piped input:
+```bash
+ahh qr
+```
+The command waits for input. Press `Ctrl+D` to signal end of input.
+
+### Content Too Large
+
+If the input exceeds QR code capacity, the generation may:
+- Fail with an error
+- Create a very large QR code that's difficult to scan
+- Truncate the content (depending on implementation)
+
+<Note>
+  Keep content concise for best scanning results. URLs work well, but large text blocks may be problematic.
+</Note>
+
+## Best Practices
+
+### URL Shortening
+
+For long URLs, consider using a URL shortener first:
+
+```bash
+# Better for scanning
+echo "https://bit.ly/abc123" | ahh qr
+
+# Harder to scan
+echo "https://example.com/very/long/path?with=many&query=parameters" | ahh qr
+```
+
+### Terminal Size
+
+Ensure your terminal is large enough to display the QR code:
+- Maximize terminal window
+- Reduce font size if needed
+- Use a terminal with good Unicode support
+
+### Lighting and Scanning
+
+For best scanning results:
+- Ensure good terminal contrast
+- Avoid terminal transparency
+- Position camera straight-on to the screen
+- Adjust screen brightness if needed
+
+## Related Commands
+
+- [tunnel](/commands/tunnel) - Automatically generates QR codes for tunnel URLs
+- [serve](/commands/serve) - Automatically generates QR codes for server URLs
+- [clip](/commands/qr) - Copy content to clipboard instead
+
+## Notes
+
+<Note>
+  The `tunnel` and `serve` commands automatically generate and display QR codes for their URLs, so you typically don't need to use this command separately for those use cases.
+</Note>
+
+<Note>
+  QR codes displayed in the terminal can be scanned directly from the screen using any QR code reader app on a mobile device.
+</Note>

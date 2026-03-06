@@ -1,0 +1,232 @@
+---
+title: Discord Webhooks
+description: Configure Discord webhooks for sharing content directly from Ahh CLI
+---
+
+Ahh CLI allows you to configure multiple Discord webhooks and share content directly to Discord channels using the `share-discord` command.
+
+## Quick Start
+
+Configure your first Discord webhook:
+
+```bash
+ahh share-discord --configure
+```
+
+This launches an interactive configuration menu where you can add, remove, and manage Discord webhooks.
+
+## Interactive Configuration
+
+The `--configure` flag provides a menu-driven interface with the following options:
+
+### View Webhooks
+
+Displays all configured webhooks with their names and URLs. The default webhook (if set) is marked with "(default)".
+
+### Add Webhook
+
+Prompts you to enter:
+
+1. **Webhook name**: A friendly identifier (e.g., "production", "team-alerts")
+2. **Webhook URL**: The full Discord webhook URL from your Discord channel settings
+3. **Set as default**: Whether to make this the default webhook
+
+<Note>
+  Webhook URLs must start with `https://discord.com/api/webhooks/` to be valid.
+</Note>
+
+### Remove Webhook
+
+Allows you to select one or more webhooks to remove. If you remove the default webhook, the default setting is automatically cleared.
+
+### Set Default
+
+Choose which webhook should be used by default when running `ahh share-discord` without specifying a webhook. You can also clear the default setting.
+
+## Webhook Configuration Structure
+
+Webhooks are stored in the `ahh.config.json` file using this structure:
+
+```json
+{
+  "DISCORD_WEBHOOKS": [
+    {
+      "name": "webhook-name",
+      "url": "https://discord.com/api/webhooks/WEBHOOK_ID/WEBHOOK_TOKEN"
+    }
+  ],
+  "DEFAULT_DISCORD_WEBHOOK": "webhook-name"
+}
+```
+
+### DISCORD_WEBHOOKS Array
+
+Each webhook object contains:
+
+<ParamField path="name" type="string" required>
+  A unique identifier for the webhook. Used to select the webhook when sharing content.
+</ParamField>
+
+<ParamField path="url" type="string" required>
+  The complete Discord webhook URL. Must start with `https://discord.com/api/webhooks/`.
+</ParamField>
+
+### DEFAULT_DISCORD_WEBHOOK
+
+<ParamField path="DEFAULT_DISCORD_WEBHOOK" type="string" optional>
+  The name of the webhook to use by default. Must match one of the names in the `DISCORD_WEBHOOKS` array.
+</ParamField>
+
+## Getting a Discord Webhook URL
+
+To create a webhook URL in Discord:
+
+1. Open Discord and navigate to the channel where you want to receive messages
+2. Click the gear icon next to the channel name (Edit Channel)
+3. Select "Integrations" from the left sidebar
+4. Click "Create Webhook" or "View Webhooks"
+5. Click "New Webhook" if needed
+6. Give your webhook a name and optionally customize its avatar
+7. Click "Copy Webhook URL"
+8. Use this URL when configuring Ahh CLI
+
+<Accordion title="Example: Discord Server Settings">
+  ```
+  Channel Settings → Integrations → Webhooks → New Webhook
+  ```
+  
+  Your webhook URL will look like:
+  ```
+  https://discord.com/api/webhooks/1234567890/AbCdEfGhIjKlMnOpQrStUvWxYz
+  ```
+</Accordion>
+
+## Usage Examples
+
+<Accordion title="Example: Configure Multiple Webhooks">
+  ```bash
+  ahh share-discord --configure
+  ```
+  
+  Then add webhooks for different environments:
+  
+  1. Add webhook named "production" → Enter production webhook URL → Set as default: Yes
+  2. Add webhook named "development" → Enter development webhook URL → Set as default: No
+  3. Add webhook named "personal" → Enter personal webhook URL → Set as default: No
+  
+  Your config will look like:
+  
+  ```json
+  {
+    "DISCORD_WEBHOOKS": [
+      {
+        "name": "production",
+        "url": "https://discord.com/api/webhooks/111/aaa"
+      },
+      {
+        "name": "development",
+        "url": "https://discord.com/api/webhooks/222/bbb"
+      },
+      {
+        "name": "personal",
+        "url": "https://discord.com/api/webhooks/333/ccc"
+      }
+    ],
+    "DEFAULT_DISCORD_WEBHOOK": "production"
+  }
+  ```
+</Accordion>
+
+<Accordion title="Example: Share Content to Default Webhook">
+  ```bash
+  echo "Deployment successful!" | ahh share-discord
+  ```
+  
+  This sends the message to your default webhook (if configured).
+</Accordion>
+
+<Accordion title="Example: Share to Specific Webhook">
+  If no default is set or you want to use a different webhook, Ahh will prompt you to select one:
+  
+  ```bash
+  echo "Debug information" | ahh share-discord
+  ```
+  
+  You'll see:
+  ```
+  ? Select webhook to use:
+  ❯ production
+    development
+    personal
+  ```
+</Accordion>
+
+## Manual Configuration
+
+You can also manually edit the config file at `~/.ahh/ahh.config.json`:
+
+```bash
+nano ~/.ahh/ahh.config.json
+```
+
+Add webhooks directly:
+
+```json
+{
+  "DEFAULT_WEBHOOK_HTTP_PORT": 4867,
+  "DEFAULT_WEBHOOK_HTTPS_PORT": 4868,
+  "DISCORD_WEBHOOKS": [
+    {
+      "name": "my-webhook",
+      "url": "https://discord.com/api/webhooks/1234567890/AbCdEfGh"
+    }
+  ],
+  "DEFAULT_DISCORD_WEBHOOK": "my-webhook"
+}
+```
+
+<Note>
+  After manually editing the config file, test your webhooks by running `ahh share-discord` to ensure they work correctly.
+</Note>
+
+## Error Handling
+
+### No Webhooks Configured
+
+If you try to use `share-discord` without any configured webhooks:
+
+```
+Error: No webhooks configured. Use 'ahh share-discord --configure' first.
+```
+
+Solution: Run `ahh share-discord --configure` to add at least one webhook.
+
+### Invalid Webhook URL
+
+When adding a webhook, the URL must start with `https://discord.com/api/webhooks/`:
+
+```
+Error: Invalid Discord webhook URL
+```
+
+Solution: Copy the complete webhook URL from Discord's webhook settings.
+
+### Failed to Send
+
+If sending to Discord fails:
+
+```
+Failed to send to Discord: Discord API returned 404
+```
+
+Possible causes:
+- The webhook was deleted in Discord
+- The webhook URL is incorrect
+- Network connectivity issues
+
+Solution: Verify the webhook still exists in Discord or reconfigure it.
+
+## Related Commands
+
+- [share-discord](/commands/share-discord) - Share content to Discord
+- [Configuration File](/configuration/config-file) - Learn about the config file structure

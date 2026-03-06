@@ -1,0 +1,250 @@
+---
+title: Installation
+description: Install Ahh CLI on Linux and macOS
+---
+
+## Quick Install
+
+Install Ahh CLI with a single command:
+
+<CodeGroup>
+
+```bash macOS/Linux
+curl -fsSL https://cli.ahh.bet/install.sh | bash
+```
+
+</CodeGroup>
+
+After installation, reload your shell configuration:
+
+<CodeGroup>
+
+```bash bash
+source ~/.bashrc
+```
+
+```bash zsh
+source ~/.zshrc
+```
+
+```fish fish
+source ~/.config/fish/config.fish
+```
+
+</CodeGroup>
+
+Verify the installation:
+
+```bash
+ahh --help
+```
+
+## Requirements
+
+Before installing Ahh CLI, ensure you have the following dependencies:
+
+<Steps>
+  <Step title="curl">
+    Required for downloading the installation script and CLI binary.
+    
+    Most systems have curl pre-installed. Verify with:
+    ```bash
+    curl --version
+    ```
+  </Step>
+  
+  <Step title="cloudflared">
+    Required for creating tunnels with the `tunnel` and `serve` commands.
+    
+    <Tip>The tunnel feature uses Cloudflare's free tunnel service to expose local ports to the internet.</Tip>
+    
+    Install cloudflared:
+    
+    <CodeGroup>
+    
+    ```bash macOS (Homebrew)
+    brew install cloudflare/cloudflare/cloudflared
+    ```
+    
+    ```bash Debian/Ubuntu
+    wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+    sudo dpkg -i cloudflared-linux-amd64.deb
+    ```
+    
+    ```bash Other Linux
+    wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+    sudo mv cloudflared-linux-amd64 /usr/local/bin/cloudflared
+    sudo chmod +x /usr/local/bin/cloudflared
+    ```
+    
+    </CodeGroup>
+  </Step>
+</Steps>
+
+## Manual Installation
+
+If you prefer to install manually:
+
+<Steps>
+  <Step title="Download the binary">
+    Download the appropriate archive for your operating system:
+    
+    <CodeGroup>
+    
+    ```bash Linux
+    mkdir -p ~/.ahh/bin
+    curl -L -o ~/.ahh/ahh-dist-linux.tar.gz \
+      https://github.com/abhishekg999/ahh/releases/latest/download/ahh-dist-linux.tar.gz
+    ```
+    
+    ```bash macOS
+    mkdir -p ~/.ahh/bin
+    curl -L -o ~/.ahh/ahh-dist-darwin.tar.gz \
+      https://github.com/abhishekg999/ahh/releases/latest/download/ahh-dist-darwin.tar.gz
+    ```
+    
+    </CodeGroup>
+  </Step>
+  
+  <Step title="Extract and install">
+    <CodeGroup>
+    
+    ```bash Linux
+    tar -xzf ~/.ahh/ahh-dist-linux.tar.gz -C ~/.ahh
+    rm ~/.ahh/ahh-dist-linux.tar.gz
+    chmod +x ~/.ahh/bin/ahh
+    ```
+    
+    ```bash macOS
+    tar -xzf ~/.ahh/ahh-dist-darwin.tar.gz -C ~/.ahh
+    rm ~/.ahh/ahh-dist-darwin.tar.gz
+    chmod +x ~/.ahh/bin/ahh
+    ```
+    
+    </CodeGroup>
+  </Step>
+  
+  <Step title="Add to PATH">
+    Add the following to your shell configuration file:
+    
+    <CodeGroup>
+    
+    ```bash ~/.bashrc
+    # ahh
+    export AHH_HOME="$HOME/.ahh"
+    export PATH="$HOME/.ahh/bin:$PATH"
+    ```
+    
+    ```bash ~/.zshrc
+    # ahh
+    export AHH_HOME="$HOME/.ahh"
+    export PATH="$HOME/.ahh/bin:$PATH"
+    ```
+    
+    ```fish ~/.config/fish/config.fish
+    # ahh
+    set -g -x AHH_HOME "$HOME/.ahh"
+    set -g -x PATH $HOME/.ahh/bin $PATH
+    ```
+    
+    </CodeGroup>
+  </Step>
+  
+  <Step title="Reload shell">
+    Apply the changes:
+    
+    <CodeGroup>
+    
+    ```bash bash
+    source ~/.bashrc
+    ```
+    
+    ```bash zsh
+    source ~/.zshrc
+    ```
+    
+    ```fish fish
+    source ~/.config/fish/config.fish
+    ```
+    
+    </CodeGroup>
+  </Step>
+</Steps>
+
+## Shell Completions
+
+The installation script automatically sets up shell completions. If you installed manually, add completions with:
+
+<Steps>
+  <Step title="Generate completion script">
+    ```bash
+    AHH_COMPLETIONS=1 ~/.ahh/bin/ahh > ~/.ahh/_ahh
+    ```
+  </Step>
+  
+  <Step title="Load completions">
+    Add to your shell configuration:
+    
+    <CodeGroup>
+    
+    ```bash ~/.bashrc or ~/.zshrc
+    # ahh completions
+    [ -s "$HOME/.ahh/_ahh" ] && source "$HOME/.ahh/_ahh"
+    ```
+    
+    ```fish ~/.config/fish/config.fish
+    # ahh completions
+    [ -s "$HOME/.ahh/_ahh" ]; and source "$HOME/.ahh/_ahh"
+    ```
+    
+    </CodeGroup>
+  </Step>
+</Steps>
+
+<Note>
+Shell completions provide tab-completion for commands and options, improving your workflow efficiency.
+</Note>
+
+## Updating
+
+Update to the latest version of Ahh CLI:
+
+```bash
+ahh update
+```
+
+This command automatically downloads and installs the latest release.
+
+## Troubleshooting
+
+<Warning>
+If you encounter "command not found" errors after installation, ensure you've reloaded your shell configuration or opened a new terminal window.
+</Warning>
+
+### Unsupported Shell
+
+If you're using a shell other than bash, zsh, or fish, manually add the following to your shell configuration:
+
+```bash
+export AHH_HOME="$HOME/.ahh"
+export PATH="$HOME/.ahh/bin:$PATH"
+[ -s "$HOME/.ahh/_ahh" ] && source "$HOME/.ahh/_ahh"
+```
+
+### Cloudflared Not Found
+
+If tunnel commands fail with "cloudflared not found":
+
+1. Verify cloudflared is installed: `cloudflared --version`
+2. Ensure cloudflared is in your PATH
+3. Reinstall cloudflared using the instructions in the Requirements section
+
+## Uninstalling
+
+To remove Ahh CLI:
+
+```bash
+rm -rf ~/.ahh
+```
+
+Then remove the configuration lines from your shell config file (`~/.bashrc`, `~/.zshrc`, or `~/.config/fish/config.fish`).

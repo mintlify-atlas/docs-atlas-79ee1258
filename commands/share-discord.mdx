@@ -1,0 +1,286 @@
+---
+title: "ahh share-discord"
+description: "Share stdin content through Discord webhooks"
+---
+
+## Overview
+
+The `share-discord` command sends content from stdin to Discord channels via webhooks. It includes a configuration system for managing multiple webhooks and setting defaults.
+
+## Syntax
+
+```bash
+echo "message" | ahh share-discord [--configure]
+```
+
+## Parameters
+
+<ParamField path="configure" type="boolean" optional>
+  Opens the interactive webhook configuration menu instead of sending a message.
+  
+  **Aliases:** `-c`
+</ParamField>
+
+## Usage Examples
+
+<CodeGroup>
+```bash Send Messages
+# Send a simple message
+echo "Hello from CLI!" | ahh share-discord
+
+# Send command output
+ls -la | ahh share-discord
+
+# Send file contents
+cat error.log | ahh share-discord
+```
+
+```bash Configure Webhooks
+# Open configuration menu
+ahh share-discord --configure
+
+# Using short alias
+ahh share-discord -c
+```
+
+```bash Real-World Examples
+# Send deployment status
+echo "Deployment completed successfully!" | ahh share-discord
+
+# Send error alerts
+./script.sh 2>&1 | grep ERROR | ahh share-discord
+
+# Send test results
+npm test | tail -n 10 | ahh share-discord
+
+# Send build logs
+make build 2>&1 | ahh share-discord
+```
+</CodeGroup>
+
+## Configuration Menu
+
+Running with `--configure` opens an interactive menu:
+
+### Menu Options
+
+**View Webhooks**
+- Lists all configured webhooks
+- Shows which webhook is set as default
+- Displays webhook URLs
+
+**Add Webhook**
+- Prompts for webhook name
+- Prompts for Discord webhook URL
+- Option to set as default
+- Validates URL format
+
+**Remove Webhook**
+- Shows checkbox list of webhooks
+- Allows selecting multiple webhooks to remove
+- Clears default if removed
+
+**Set Default**
+- Select which webhook to use by default
+- Option to clear default (will prompt each time)
+
+**Exit**
+- Returns to the shell
+
+### Example Configuration Session
+
+```bash
+$ ahh share-discord --configure
+
+? Webhook Configuration
+  View Webhooks
+❯ Add Webhook
+  Remove Webhook
+  Set Default
+  Exit
+
+? Enter webhook name: production-alerts
+? Enter Discord webhook URL: https://discord.com/api/webhooks/123/abc
+? Set as default webhook? Yes
+✓ Added webhook "production-alerts" and set as default
+```
+
+## Discord Webhook Setup
+
+### Creating a Discord Webhook
+
+1. Open Discord and go to Server Settings
+2. Navigate to Integrations → Webhooks
+3. Click "New Webhook"
+4. Customize the webhook name and channel
+5. Copy the Webhook URL
+6. Use the URL with `ahh share-discord --configure`
+
+### Webhook URL Format
+
+```
+https://discord.com/api/webhooks/{webhook-id}/{webhook-token}
+```
+
+<Warning>
+  Keep your webhook URLs private! Anyone with the URL can send messages to your Discord channel.
+</Warning>
+
+## Output
+
+When sending a message, the command displays:
+
+```bash
+Preparing to send message to Discord...
+Message length: 42 characters
+Sending to Discord...
+Successfully sent to Discord!
+```
+
+### Color-Coded Output
+
+- Blue: Preparing message
+- White: Message length info
+- Yellow: Sending status
+- Green: Success confirmation
+- Red: Error messages
+
+## How It Works
+
+### Webhook Selection
+
+1. **If default webhook is set**: Uses default automatically
+2. **If no default**: Shows selection prompt with all webhooks
+3. **If no webhooks configured**: Throws error with instructions
+
+### Message Sending
+
+1. Reads content from stdin
+2. Validates webhook configuration
+3. Constructs JSON payload: `{ "content": "message" }`
+4. Sends POST request to Discord webhook URL
+5. Verifies response status
+
+### Error Handling
+
+**No Webhooks Configured**
+```
+No webhooks configured. Use 'ahh share-discord --configure' first.
+```
+
+**Discord API Error**
+```
+Failed to send to Discord: Discord API returned 404
+```
+
+Possible Discord API errors:
+- `404`: Webhook not found (deleted or invalid URL)
+- `429`: Rate limited (too many requests)
+- `400`: Bad request (malformed payload)
+
+## Configuration Storage
+
+Webhooks are stored in the Ahh configuration file at `~/.ahh/config.json`:
+
+```json
+{
+  "DISCORD_WEBHOOKS": [
+    {
+      "name": "production-alerts",
+      "url": "https://discord.com/api/webhooks/123/abc"
+    },
+    {
+      "name": "dev-logs",
+      "url": "https://discord.com/api/webhooks/456/def"
+    }
+  ],
+  "DEFAULT_DISCORD_WEBHOOK": "production-alerts"
+}
+```
+
+## Message Limitations
+
+<Note>
+  Discord messages are limited to 2,000 characters. Messages exceeding this limit will fail with a 400 error.
+</Note>
+
+For longer content:
+```bash
+# Send only first 1900 characters (safe limit)
+cat large-file.txt | head -c 1900 | ahh share-discord
+
+# Send summary instead
+wc -l large-file.txt | ahh share-discord
+```
+
+## Advanced Usage
+
+### Automation Scripts
+
+```bash
+#!/bin/bash
+# Send deployment notifications
+
+if deploy_app; then
+  echo "✅ Deployment successful: $(date)" | ahh share-discord
+else
+  echo "❌ Deployment failed: $(date)" | ahh share-discord
+  exit 1
+fi
+```
+
+### Monitoring
+
+```bash
+# Monitor error logs
+tail -f /var/log/app.log | grep -i error | while read line; do
+  echo "🚨 Error detected: $line" | ahh share-discord
+done
+```
+
+### CI/CD Integration
+
+```yaml
+# GitHub Actions example
+- name: Notify Discord
+  run: |
+    echo "Build completed for ${{ github.sha }}" | ahh share-discord
+```
+
+## Technical Details
+
+### Implementation
+
+Built using:
+- **@inquirer/prompts** - Interactive CLI prompts
+- **fetch API** - HTTP requests to Discord
+- **Ahh config system** - Persistent webhook storage
+
+### Webhook Validation
+
+URL validation ensures:
+- Starts with `https://discord.com/api/webhooks/`
+- Prevents accidental invalid URLs
+- Provides helpful error messages
+
+### Interactive Prompts
+
+- **select**: Choose from menu options
+- **checkbox**: Multi-select for removal
+- **input**: Text entry with validation
+- **confirm**: Yes/no questions
+
+## Security Considerations
+
+<Warning>
+  - Never commit webhook URLs to version control
+  - Don't share webhook URLs publicly
+  - Rotate webhooks if they're exposed
+  - Use different webhooks for different sensitivity levels
+</Warning>
+
+## Related Commands
+
+- [clip](/commands/clip) - Copy content to clipboard instead
+- [qr](/commands/qr) - Generate QR codes for content
+- [webhook](/commands/webhook) - Receive webhooks instead of sending them

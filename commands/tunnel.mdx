@@ -1,0 +1,123 @@
+---
+title: "ahh tunnel"
+description: "Create a Cloudflare tunnel to expose a local port to the internet"
+---
+
+## Overview
+
+The `tunnel` command creates a secure Cloudflare tunnel that exposes a local port to the internet. It automatically generates a public URL and displays a QR code for easy sharing.
+
+## Syntax
+
+```bash
+ahh tunnel --port <port>
+```
+
+## Parameters
+
+<ParamField path="port" type="number" required>
+  The local port number to tunnel. This is the port where your local service is running.
+  
+  **Aliases:** `-p`
+</ParamField>
+
+## Usage Examples
+
+<CodeGroup>
+```bash Basic Usage
+# Tunnel port 3000 to the internet
+ahh tunnel --port 3000
+```
+
+```bash Using Short Alias
+# Use -p shorthand
+ahh tunnel -p 8080
+```
+
+```bash Common Use Cases
+# Expose a local web server
+ahh tunnel -p 8000
+
+# Share a development server
+ahh tunnel -p 5173
+
+# Expose an API server
+ahh tunnel -p 4000
+```
+</CodeGroup>
+
+## Output
+
+When successful, the command displays:
+- A spinner message: "Starting tunnel, this may take a second..."
+- The tunnel URL (e.g., `https://xyz-abc.trycloudflare.com`)
+- A QR code containing the tunnel URL for easy mobile access
+
+```bash Example Output
+Starting tunnel, this may take a second...
+Tunnel URL: https://random-subdomain.trycloudflare.com
+[QR CODE]
+```
+
+## Return Value
+
+The underlying `tunnel()` function returns an object with:
+- `url`: The public tunnel URL (string)
+- `kill`: Function to terminate the tunnel process
+
+If the tunnel fails to create, it returns an empty object `{}`.
+
+## Error Handling
+
+<Warning>
+  **Rate Limiting**: Cloudflare may rate limit free tunnel creation. If you encounter rate limits, consider configuring a tunnel on your own domain.
+</Warning>
+
+The command handles the following errors:
+
+### Rate Limit Error
+If you see "429 Too Many Requests", the command will display:
+```
+Rate limited creating free tunnel. Configure a tunnel on your domain to avoid rate limits.
+```
+
+### Connection Failures
+The tunnel monitors the Cloudflare process output for:
+- Invalid character errors
+- Connection registration success
+- Rate limit responses
+
+## Technical Details
+
+### Implementation
+
+The tunnel command uses Cloudflare's `cloudflared` binary to create a quick tunnel. The implementation:
+
+1. Spawns a `cloudflared tunnel --url http://localhost:<port>` process
+2. Monitors the stderr output for the tunnel URL
+3. Extracts the URL using regex: `/https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/`
+4. Waits for "Registered tunnel connection" confirmation
+5. Returns the URL and process control
+
+### URL Pattern
+
+Cloudflare generates URLs matching the pattern:
+```
+https://[random-subdomain].trycloudflare.com
+```
+
+## Notes
+
+<Note>
+  The tunnel process runs in the background and continues until you terminate the CLI. The tunnel will close when you exit the process.
+</Note>
+
+<Note>
+  Ensure `cloudflared` is installed on your system. The Ahh CLI requires this dependency to create tunnels.
+</Note>
+
+## Related Commands
+
+- [serve](/commands/serve) - Serve files from the current directory with automatic tunneling
+- [webhook](/commands/webhook) - Start a webhook server with tunneling
+- [qr](/commands/qr) - Generate QR codes for URLs

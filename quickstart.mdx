@@ -1,80 +1,250 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quickstart
+description: Get started with Ahh CLI in 5 minutes
 ---
 
-## Get started in three steps
+## Installation
 
-Get your documentation site running locally and make your first customization.
+First, install Ahh CLI:
 
-### Step 1: Set up your local environment
-
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+```bash
+curl -fsSL https://cli.ahh.bet/install.sh | bash
+source ~/.bashrc  # or ~/.zshrc for zsh
+```
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+Make sure you have [cloudflared](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/) installed for tunnel functionality.
 </Note>
+
+## Your First Tunnel
+
+Tunnels allow you to expose local services to the internet instantly - perfect for CTF challenges, demos, or quick file sharing.
+
+<Steps>
+  <Step title="Start a local service">
+    First, run a simple HTTP server on port 8000:
+    
+    ```bash
+    python3 -m http.server 8000
+    ```
+    
+    <Tip>You can tunnel any service running on localhost, not just HTTP servers.</Tip>
+  </Step>
+  
+  <Step title="Create a tunnel">
+    In a new terminal, create a tunnel to your service:
+    
+    ```bash
+    ahh tunnel --port 8000
+    ```
+    
+    Or use the shorthand:
+    
+    ```bash
+    ahh tunnel -p 8000
+    ```
+  </Step>
+  
+  <Step title="Get your public URL">
+    Ahh CLI will output a public URL and QR code:
+    
+    ```
+    Tunnel URL: https://abc-123-def.trycloudflare.com
+    
+    ███████████████████████████████
+    ███████████████████████████████
+    ████ ▄▄▄▄▄ █▀█ █▄█▄█ ▄▄▄▄▄ ████
+    ████ █   █ █▀▀▀█ ▄ █ █   █ ████
+    ████ █▄▄▄█ █▀ █▀▀█▄█ █▄▄▄█ ████
+    ████▄▄▄▄▄▄▄█▄▀ ▀▄█ █▄▄▄▄▄▄▄████
+    ```
+    
+    The URL is immediately accessible from anywhere on the internet!
+  </Step>
+</Steps>
+
+## Serve Files Instantly
+
+The `serve` command combines a file server with automatic tunneling:
+
+```bash
+ahh serve
+```
+
+This command:
+1. Starts an HTTP server in your current directory (default port 8000)
+2. Creates a tunnel automatically
+3. Displays a public URL and QR code
+
+**Example output:**
+```
+URL: https://xyz-789-abc.trycloudflare.com
+
+███████████████████████████████
+███████████████████████████████
+████ ▄▄▄▄▄ █▀█ █▄█▄█ ▄▄▄▄▄ ████
+████ █   █ █▀▀▀█ ▄ █ █   █ ████
+████ █▄▄▄█ █▀ █▀▀█▄█ █▄▄▄█ ████
+████▄▄▄▄▄▄▄█▄▀ ▀▄█ █▄▄▄▄▄▄▄████
+```
+
+<Tip>Scan the QR code with your phone to instantly access files from any device!</Tip>
+
+### Custom Port
+
+Serve on a different port:
+
+```bash
+ahh serve --port 3000
+# or
+ahh serve -p 3000
+```
+
+## Generate QR Codes
+
+Generate QR codes from any text or URL:
+
+```bash
+echo "https://example.com" | ahh qr
+```
+
+**Share files with QR codes:**
+```bash
+ahh serve
+# Automatically generates a QR code for the tunnel URL
+```
+
+**Create custom QR codes:**
+```bash
+echo "CTF{flag_goes_here}" | ahh qr
+```
+
+```bash
+echo "ssh user@example.com" | ahh qr
+```
+
+## Copy to Clipboard
+
+Pipe any content to your clipboard:
+
+```bash
+cat file.txt | ahh clip
+```
+
+```bash
+ls -la | ahh clip
+```
+
+```bash
+echo "some text" | ahh clip
+```
+
+<Note>
+The `clip` command works with any stdin input, making it easy to copy command outputs.
+</Note>
+
+## Real-World CTF Example
+
+Here's a complete workflow for sharing a CTF challenge file:
+
+<Steps>
+  <Step title="Navigate to challenge directory">
+    ```bash
+    cd ~/ctf-challenges/web-challenge
+    ls
+    # Output: index.html exploit.sh README.md
+    ```
+  </Step>
+  
+  <Step title="Serve the directory">
+    ```bash
+    ahh serve
+    ```
+    
+    Output:
+    ```
+    URL: https://quick-snow-1234.trycloudflare.com
+    
+    ███████████████████████████████
+    ██ QR CODE DISPLAYED HERE    ██
+    ███████████████████████████████
+    ```
+  </Step>
+  
+  <Step title="Share the link">
+    Your teammates can now:
+    - Visit the URL to browse files
+    - Scan the QR code on mobile devices
+    - Download challenge files instantly
+    
+    ```bash
+    # Teammates can download with:
+    curl https://quick-snow-1234.trycloudflare.com/exploit.sh -o exploit.sh
+    ```
+  </Step>
+</Steps>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Commands" icon="terminal" href="/commands/tunnel">
+    Explore all available commands and options
+  </Card>
+  <Card title="Webhook Server" icon="webhook" href="/commands/webhook">
+    Set up webhook servers for CTF challenges
+  </Card>
+  <Card title="Workspaces" icon="folder" href="/commands/workspace">
+    Initialize CTF workspace templates
+  </Card>
+  <Card title="Discord Integration" icon="discord" href="/commands/share-discord">
+    Share content through Discord webhooks
+  </Card>
+</CardGroup>
+
+## Common Use Cases
+
+### Quick File Sharing
+```bash
+cd ~/files-to-share
+ahh serve
+# Share the URL or QR code
+```
+
+### Expose Local Development Server
+```bash
+# Your app runs on port 3000
+npm run dev
+
+# In another terminal
+ahh tunnel -p 3000
+```
+
+### Share Command Output
+```bash
+ifconfig | ahh clip
+# Now paste the network config anywhere
+```
+
+### Generate Access QR Code
+```bash
+echo "wifi-password-here" | ahh qr
+# Scan to share WiFi password
+```
+
+<Warning>
+Tunnel URLs are public and accessible by anyone with the link. Don't expose sensitive services without proper authentication.
+</Warning>
+
+## Tips
+
+<Tip>
+**Keep tunnels running:** Tunnel processes run in the foreground. Use `tmux` or `screen` to keep them alive when closing your terminal.
+</Tip>
+
+<Tip>
+**Port already in use?** If you get an error about ports being in use, either stop the existing service or choose a different port with `-p`.
+</Tip>
+
+<Tip>
+**Rate limiting:** Free Cloudflare tunnels may be rate-limited. If you hit limits frequently, consider configuring a custom tunnel on your domain.
+</Tip>

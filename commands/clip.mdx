@@ -1,0 +1,222 @@
+---
+title: "ahh clip"
+description: "Copy stdin content to the system clipboard"
+---
+
+## Overview
+
+The `clip` command reads content from standard input (stdin) and copies it to your system clipboard. It's perfect for capturing command output, file contents, or piped data for easy pasting.
+
+## Syntax
+
+```bash
+<command> | ahh clip
+```
+
+## Parameters
+
+This command takes no parameters. It reads all input from stdin.
+
+## Usage Examples
+
+<CodeGroup>
+```bash Copy Command Output
+# Copy the output of ls
+ls -la | ahh clip
+
+# Copy git status
+git status | ahh clip
+
+# Copy current directory path
+pwd | ahh clip
+```
+
+```bash Copy File Contents
+# Copy a file to clipboard
+cat README.md | ahh clip
+
+# Copy JSON file
+cat package.json | ahh clip
+
+# Copy error logs
+tail -n 50 error.log | ahh clip
+```
+
+```bash Copy Command Results
+# Copy curl response
+curl https://api.example.com/data | ahh clip
+
+# Copy grep results
+grep -r "TODO" src/ | ahh clip
+
+# Copy find results
+find . -name "*.ts" | ahh clip
+```
+
+```bash Advanced Pipelines
+# Copy formatted JSON
+cat data.json | jq '.' | ahh clip
+
+# Copy git diff
+git diff HEAD~1 | ahh clip
+
+# Copy docker logs
+docker logs container-name | ahh clip
+
+# Copy system information
+uname -a | ahh clip
+```
+</CodeGroup>
+
+## Output
+
+When successful, the command displays:
+```
+Copied to clipboard.
+```
+
+## How It Works
+
+### Stdin Reading
+
+The command:
+1. Waits for stdin input (blocks if no input is piped)
+2. Reads all available stdin content
+3. Passes the content to the system clipboard
+4. Confirms the operation
+
+### Clipboard Integration
+
+Uses the `copy-paste` npm package which:
+- Detects your operating system
+- Uses the appropriate clipboard mechanism:
+  - **macOS**: `pbcopy`
+  - **Linux**: `xclip` or `xsel`
+  - **Windows**: `clip`
+
+## Platform Requirements
+
+### macOS
+
+<Note>
+  Works out of the box. Uses the built-in `pbcopy` command.
+</Note>
+
+### Linux
+
+<Warning>
+  Requires `xclip` or `xsel` to be installed.
+</Warning>
+
+Install on Ubuntu/Debian:
+```bash
+sudo apt-get install xclip
+```
+
+Install on Fedora/RHEL:
+```bash
+sudo dnf install xclip
+```
+
+### Windows
+
+<Note>
+  Uses the built-in `clip` command. Works out of the box.
+</Note>
+
+## Common Patterns
+
+### Debugging
+
+```bash
+# Copy error output for sharing
+npm run build 2>&1 | ahh clip
+
+# Copy test failures
+pytest 2>&1 | ahh clip
+```
+
+### Configuration Sharing
+
+```bash
+# Copy SSH public key
+cat ~/.ssh/id_rsa.pub | ahh clip
+
+# Copy environment variables
+env | ahh clip
+
+# Copy network configuration
+ifconfig | ahh clip
+```
+
+### Code Sharing
+
+```bash
+# Copy a function from a file
+grep -A 20 "function myFunc" script.js | ahh clip
+
+# Copy all imports from a file
+grep "^import" src/index.ts | ahh clip
+```
+
+### Data Processing
+
+```bash
+# Copy processed data
+cat data.csv | cut -d',' -f1,3 | ahh clip
+
+# Copy sorted unique values
+cat list.txt | sort | uniq | ahh clip
+```
+
+## Technical Details
+
+### Implementation
+
+The command uses:
+- **copy-paste** library for cross-platform clipboard access
+- Bun's stdin reading utilities
+- Synchronous clipboard operation
+
+### Stdin Reading
+
+The stdin content is read using:
+```typescript
+const input = await getStdin();
+```
+
+This function:
+- Reads from `process.stdin`
+- Waits for EOF (End of File)
+- Returns the complete input as a string
+
+## Error Handling
+
+### No Stdin Input
+
+If you run the command without piping input:
+```bash
+ahh clip
+```
+The command will wait indefinitely for input. Press `Ctrl+D` (Unix) or `Ctrl+Z` (Windows) to signal EOF.
+
+### Clipboard Access Errors
+
+If clipboard access fails (missing dependencies on Linux):
+- The command may throw an error
+- Install the required clipboard utility for your platform
+
+## Notes
+
+<Note>
+  The entire stdin is read into memory before copying. For very large inputs, this may consume significant memory.
+</Note>
+
+<Note>
+  The clipboard content persists after the command exits, allowing you to paste it anywhere.
+</Note>
+
+## Related Commands
+
+- [qr](/commands/qr) - Generate QR codes from stdin
+- [share-discord](/commands/share-discord) - Share stdin content to Discord

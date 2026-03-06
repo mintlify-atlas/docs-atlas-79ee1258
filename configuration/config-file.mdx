@@ -1,0 +1,137 @@
+---
+title: Configuration File
+description: Learn how to configure Ahh CLI using the ahh.config.json file
+---
+
+Ahh CLI uses a JSON configuration file to store settings for webhooks, Discord integrations, and default ports.
+
+## Config File Location
+
+The configuration file is located at:
+
+```
+~/.ahh/ahh.config.json
+```
+
+If the config file doesn't exist, Ahh will automatically create it with default values when you first run a command that requires configuration.
+
+## Configuration Schema
+
+The configuration file uses the following structure:
+
+```json
+{
+  "DEFAULT_WEBHOOK_HTTP_PORT": 4867,
+  "DEFAULT_WEBHOOK_HTTPS_PORT": 4868,
+  "DISCORD_WEBHOOKS": [],
+  "DEFAULT_DISCORD_WEBHOOK": "optional-webhook-name"
+}
+```
+
+## Configuration Options
+
+<ParamField path="DEFAULT_WEBHOOK_HTTP_PORT" type="number" default={4867}>
+  The default port to use for HTTP webhook servers when using the `ahh webhook` command.
+</ParamField>
+
+<ParamField path="DEFAULT_WEBHOOK_HTTPS_PORT" type="number" default={4868}>
+  The default port to use for HTTPS webhook servers when using the `ahh webhook` command.
+</ParamField>
+
+<ParamField path="DISCORD_WEBHOOKS" type="array" default={[]}>
+  An array of Discord webhook configurations. Each webhook object contains:
+  
+  - `name` (string): A friendly name to identify the webhook
+  - `url` (string): The full Discord webhook URL
+  
+  ```json
+  "DISCORD_WEBHOOKS": [
+    {
+      "name": "production",
+      "url": "https://discord.com/api/webhooks/..."
+    },
+    {
+      "name": "development",
+      "url": "https://discord.com/api/webhooks/..."
+    }
+  ]
+  ```
+</ParamField>
+
+<ParamField path="DEFAULT_DISCORD_WEBHOOK" type="string" optional>
+  The name of the default Discord webhook to use when sharing content. Must match one of the webhook names in the `DISCORD_WEBHOOKS` array.
+</ParamField>
+
+## Default Configuration
+
+When first created, the config file contains these default values:
+
+```json
+{
+  "DEFAULT_WEBHOOK_HTTP_PORT": 4867,
+  "DEFAULT_WEBHOOK_HTTPS_PORT": 4868,
+  "DISCORD_WEBHOOKS": []
+}
+```
+
+## How Configuration is Loaded
+
+Ahh CLI loads configuration using the following process:
+
+1. Checks if `~/.ahh/ahh.config.json` exists
+2. If it doesn't exist, creates it with default values
+3. If it exists, reads and parses the JSON file
+4. Merges the file contents with default values (file values take precedence)
+5. Validates the configuration against the schema
+
+<Note>
+  All configuration options are optional. If a value is missing from your config file, Ahh will use the default value.
+</Note>
+
+## Manual Configuration
+
+You can manually edit the configuration file with any text editor:
+
+```bash
+nano ~/.ahh/ahh.config.json
+```
+
+<Accordion title="Example: Custom Port Configuration">
+  ```json
+  {
+    "DEFAULT_WEBHOOK_HTTP_PORT": 8080,
+    "DEFAULT_WEBHOOK_HTTPS_PORT": 8443,
+    "DISCORD_WEBHOOKS": []
+  }
+  ```
+  
+  This configuration changes the default webhook ports to 8080 (HTTP) and 8443 (HTTPS).
+</Accordion>
+
+<Accordion title="Example: Multiple Discord Webhooks">
+  ```json
+  {
+    "DEFAULT_WEBHOOK_HTTP_PORT": 4867,
+    "DEFAULT_WEBHOOK_HTTPS_PORT": 4868,
+    "DISCORD_WEBHOOKS": [
+      {
+        "name": "team-alerts",
+        "url": "https://discord.com/api/webhooks/123456/abcdef"
+      },
+      {
+        "name": "personal",
+        "url": "https://discord.com/api/webhooks/789012/ghijkl"
+      }
+    ],
+    "DEFAULT_DISCORD_WEBHOOK": "team-alerts"
+  }
+  ```
+  
+  This configuration sets up two Discord webhooks with "team-alerts" as the default.
+</Accordion>
+
+## Related Commands
+
+- [Discord Webhooks Configuration](/configuration/discord-webhooks) - Learn how to configure Discord webhooks using the CLI
+- [share-discord](/commands/share-discord) - Share content to Discord using configured webhooks
+- [webhook](/commands/webhook) - Start a webhook server using configured ports

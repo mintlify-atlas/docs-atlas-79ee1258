@@ -1,0 +1,240 @@
+---
+title: 'Tunneling'
+description: 'Expose local services to the internet with Cloudflare tunnels'
+icon: 'globe'
+---
+
+## Overview
+
+Ahh CLI provides instant tunneling capabilities using Cloudflare's infrastructure. The tunneling feature allows you to expose local development servers to the internet with a public HTTPS URL, making it perfect for:
+
+- Testing webhooks from external services
+- Sharing local development with clients or team members
+- Accessing local services remotely
+- Mobile device testing
+
+## How It Works
+
+Ahh CLI uses `cloudflared` under the hood to create secure tunnels. When you run the tunnel command, it:
+
+1. Spawns a cloudflared process targeting your local port
+2. Monitors the process output to extract the tunnel URL
+3. Returns a public HTTPS URL (e.g., `https://xyz-abc-123.trycloudflare.com`)
+4. Optionally generates a QR code for easy mobile access
+
+<Note>
+Cloudflare free tunnels are rate-limited. If you encounter rate limiting, consider configuring a tunnel on your own domain.
+</Note>
+
+## Basic Usage
+
+### Tunnel a Local Port
+
+Expose any local port to the internet:
+
+```bash
+ahh tunnel --port 3000
+```
+
+You can also use the short flag:
+
+```bash
+ahh tunnel -p 8080
+```
+
+### Example Output
+
+```
+Starting tunnel, this may take a second...
+Tunnel URL: https://abc-def-123.trycloudflare.com
+
+█████████████████████████████
+█████████████████████████████
+████ ▄▄▄▄▄ █▀█ █▄█▄█ ▄▄▄▄▄ ████
+████ █   █ █▀▀▀▄ ▀█ █   █ ████
+████ █▄▄▄█ █▀ █▀▀ ▄█ █▄▄▄█ ████
+████▄▄▄▄▄▄▄█▄▀ ▀▄█▄█▄▄▄▄▄▄▄████
+```
+
+## Implementation Details
+
+### Tunnel URL Detection
+
+The CLI uses a regex pattern to extract the tunnel URL from cloudflared's stderr output:
+
+```typescript
+const TUNNEL_REGEX = /https:\/\/[a-zA-Z0-9-]+\.trycloudflare\.com/;
+
+function matchTunnelUrl(url: string): string | null {
+  const match = url.match(TUNNEL_REGEX);
+  if (match) {
+    return match[0];
+  }
+  return null;
+}
+```
+
+Reference: `/home/daytona/workspace/source/ahh-binary/src/commands/tunnel/main.ts:1-9`
+
+### Process Management
+
+The tunnel function spawns cloudflared and monitors its stderr stream:
+
+```typescript
+export async function tunnel(port: number) {
+  const url = `http://localhost:${port}`;
+  const proc = Bun.spawn(["cloudflared", "tunnel", "--url", url], {
+    stderr: "pipe",
+  });
+
+  const reader = proc.stderr.getReader();
+  const decoder = new TextDecoder();
+
+  let tunnelUrl: string | null = null;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const text = decoder.decode(value);
+
+    if (!tunnelUrl) tunnelUrl = matchTunnelUrl(text);
+    if (text.includes("Registered tunnel connection") && tunnelUrl) {
+      return {
+        url: tunnelUrl,
+        kill: proc.kill,
+      };
+    }
+  }
+
+  return {};
+}
+```
+
+Reference: `/home/daytona/workspace/source/ahh-binary/src/commands/tunnel/main.ts:11-46`
+
+### Rate Limiting Detection
+
+The implementation detects and reports rate limiting issues:
+
+```typescript
+if (
+  text.includes("invalid character 'e'") ||
+  text.includes("429 Too Many Requests")
+) {
+  console.error(
+    "Rate limited creating free tunnel. Configure a tunnel on your domain to avoid rate limits."
+  );
+  break;
+}
+```
+
+Reference: `/home/daytona/workspace/source/ahh-binary/src/commands/tunnel/main.ts:27-35`
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Webhook Development" icon="webhook">
+    Test webhooks from services like GitHub, Stripe, or Twilio without deploying to a server.
+  </Card>
+  
+  <Card title="Client Demos" icon="presentation-screen">
+    Share your local development environment with clients or stakeholders for immediate feedback.
+  </Card>
+  
+  <Card title="Mobile Testing" icon="mobile">
+    Use the generated QR code to quickly access your local server on mobile devices.
+  </Card>
+  
+  <Card title="Remote Access" icon="arrow-right-arrow-left">
+    Access your local development server from anywhere, even behind NAT or firewalls.
+  </Card>
+</CardGroup>
+
+## Advanced Patterns
+
+### Combining with Other Commands
+
+The tunnel functionality is used internally by other commands like `serve` and `webhook`:
+
+```typescript
+// From the serve command
+const [, { url: tunnelUrl }] = await Promise.all([
+  createSimpleServer(argv.port),
+  tunnel(argv.port),
+]);
+```
+
+### Managing Tunnel Lifecycle
+
+The tunnel function returns a kill method for cleanup:
+
+```typescript
+const { url, kill } = await tunnel(3000);
+
+// Later, when you want to stop the tunnel
+if (kill) {
+  kill();
+}
+```
+
+## Troubleshooting
+
+<Accordion title="Rate limited by Cloudflare">
+  If you see "429 Too Many Requests", you've hit Cloudflare's rate limit for free tunnels. Solutions:
+  
+  - Wait a few minutes before trying again
+  - Configure a custom tunnel on your own domain
+  - Use a different network connection
+</Accordion>
+
+<Accordion title="Tunnel URL not appearing">
+  Ensure:
+  
+  - `cloudflared` is installed and in your PATH
+  - Your local port is accessible and not blocked by a firewall
+  - You have a stable internet connection
+</Accordion>
+
+<Accordion title="Connection refused errors">
+  Make sure your local server is actually running on the specified port before starting the tunnel.
+</Accordion>
+
+## Best Practices
+
+<Warning>
+Never expose sensitive services or production databases through public tunnels. Always use authentication and be aware that your service is publicly accessible.
+</Warning>
+
+1. **Use for development only** - Tunnels should be used for testing and development, not production traffic
+2. **Secure your endpoints** - Implement authentication even for development tunnels
+3. **Monitor tunnel lifetime** - Free tunnels may disconnect; monitor the connection status
+4. **Clean up processes** - Always kill tunnel processes when done to free up resources
+
+## Related Commands
+
+- [Webhook Server](/features/webhook-server) - Receive and inspect webhooks with tunneling
+- [File Serving](/features/file-serving) - Serve static files with automatic tunneling
+
+## Technical Reference
+
+### Command Options
+
+| Option | Alias | Type | Required | Description |
+|--------|-------|------|----------|-------------|
+| `--port` | `-p` | number | Yes | Local port to tunnel |
+
+### Return Value
+
+The tunnel function returns an object with:
+
+```typescript
+{
+  url?: string;      // The public tunnel URL
+  kill?: () => void; // Function to terminate the tunnel
+}
+```
+
+### Dependencies
+
+- **cloudflared**: Must be installed on your system
+- **Bun runtime**: Used for process spawning and stream handling

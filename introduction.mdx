@@ -1,0 +1,97 @@
+---
+title: Introduction
+description: A powerful CLI tool for CTF competitions with tunneling, webhooks, and workspace management
+---
+
+# Welcome to Ahh CLI
+
+Ahh CLI is a specialized command-line tool designed for Capture The Flag (CTF) competitions and security research. It streamlines common workflows with powerful features like Cloudflare tunneling, webhook servers, and pre-configured workspace templates.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get up and running with Ahh CLI in minutes
+  </Card>
+  <Card title="Installation" icon="download" href="/installation">
+    Install Ahh CLI on your system
+  </Card>
+  <Card title="Commands" icon="terminal" href="/commands/tunnel">
+    Explore all available commands
+  </Card>
+  <Card title="Configuration" icon="gear" href="/configuration/config-file">
+    Configure Ahh CLI for your workflow
+  </Card>
+</CardGroup>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Cloudflare Tunneling" icon="tunnel">
+    Expose local ports to the internet instantly with automatic Cloudflare tunnel creation
+  </Card>
+  <Card title="Webhook Server" icon="webhook">
+    Built-in webhook server with web interface for capturing and inspecting HTTP requests
+  </Card>
+  <Card title="File Serving" icon="folder-open">
+    Quick HTTP file server with automatic tunneling for easy file sharing
+  </Card>
+  <Card title="Workspace Templates" icon="code">
+    Pre-configured workspace templates for common CTF challenges
+  </Card>
+  <Card title="QR Code Generation" icon="qrcode">
+    Generate QR codes from any input for easy URL sharing
+  </Card>
+  <Card title="Discord Integration" icon="discord">
+    Share content through Discord webhooks for team collaboration
+  </Card>
+  <Card title="Clipboard Utilities" icon="clipboard">
+    Pipe any content to your clipboard with a simple command
+  </Card>
+  <Card title="Auto Updates" icon="arrows-rotate">
+    Keep your CLI up to date with the built-in update command
+  </Card>
+</CardGroup>
+
+## Why Ahh CLI?
+
+CTF competitions often require quick setup of servers, tunnels, and collaboration tools. Ahh CLI combines these essential utilities into a single, easy-to-use command-line interface:
+
+- **Fast Setup**: Get a public URL for your local service in seconds
+- **Team Collaboration**: Share webhooks and files with teammates via Discord
+- **Workspace Management**: Jump-start challenges with pre-configured templates
+- **All-in-One**: No need to juggle multiple tools and services
+
+## Common Use Cases
+
+<AccordionGroup>
+  <Accordion title="Expose a local web server">
+    Use `ahh tunnel` or `ahh serve` to instantly create a public URL for your local development server or file share.
+  </Accordion>
+  
+  <Accordion title="Capture webhook requests">
+    Use `ahh webhook` to spin up a webhook server with a web dashboard for inspecting incoming HTTP requests.
+  </Accordion>
+  
+  <Accordion title="Share files with teammates">
+    Use `ahh serve` in any directory to create an instant file server with a public URL and QR code.
+  </Accordion>
+  
+  <Accordion title="Set up CTF challenge workspace">
+    Use `ahh workspace <template>` to initialize a pre-configured environment for common CTF challenge types.
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<Steps>
+  <Step title="Install Ahh CLI">
+    Follow the [installation guide](/installation) to install Ahh CLI on your system.
+  </Step>
+  
+  <Step title="Run your first command">
+    Try the [quickstart guide](/quickstart) to see Ahh CLI in action.
+  </Step>
+  
+  <Step title="Explore commands">
+    Browse the [command reference](/commands/tunnel) to learn about all available features.
+  </Step>
+</Steps>

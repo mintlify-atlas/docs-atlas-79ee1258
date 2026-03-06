@@ -1,0 +1,482 @@
+---
+title: 'Workspace Management'
+description: 'Initialize pre-configured development environments instantly'
+icon: 'box'
+---
+
+## Overview
+
+Workspace management in Ahh CLI allows you to instantly initialize pre-configured development environments. Workspaces are templates that include:
+
+- Pre-installed dependencies
+- Configured tooling
+- Sample code and examples
+- Ready-to-use development environments
+
+This is perfect for quickly starting CTF challenges, testing environments, or demo projects without manual setup.
+
+## How It Works
+
+When you initialize a workspace, the CLI:
+
+1. Downloads a compressed workspace archive from the Ahh workspace repository
+2. Caches it locally for faster future use
+3. Extracts the contents to your specified directory
+4. Creates a fully-configured development environment
+
+<Note>
+Workspaces are cached after the first download, making subsequent initializations nearly instant.
+</Note>
+
+## Basic Usage
+
+### List Available Workspaces
+
+Currently available workspaces:
+
+```bash
+ahh workspace python-pwntools-interact
+ahh workspace web-xss-template
+```
+
+### Initialize a Workspace
+
+```bash
+ahh workspace <name>
+```
+
+This creates a directory with the workspace name in your current location.
+
+### Specify Custom Directory
+
+```bash
+ahh workspace <name> --path ./my-project
+ahh workspace <name> -p ~/projects/ctf-challenge
+```
+
+### Example Output
+
+```
+Initializing workspace...
+Workspace initialized.
+```
+
+## Available Workspaces
+
+<CardGroup cols={2}>
+  <Card title="python-pwntools-interact" icon="python">
+    Pre-configured Python environment with pwntools for CTF binary exploitation.
+    
+    **Includes:**
+    - Python 3 with pwntools
+    - Common exploitation libraries
+    - Sample interaction scripts
+  </Card>
+  
+  <Card title="web-xss-template" icon="code">
+    Template for testing and demonstrating XSS vulnerabilities.
+    
+    **Includes:**
+    - HTML/JS templates
+    - XSS payload examples
+    - Testing environment setup
+  </Card>
+</CardGroup>
+
+## Implementation Details
+
+### Workspace Download and Caching
+
+The system downloads and caches workspaces efficiently:
+
+```typescript
+export async function downloadAndCacheWorkspace(workspaceId: string) {
+  const workspaceCachePath = path.join(WORKSPACE_CACHE_DIR, workspaceId);
+  await mkdirAlways(workspaceCachePath);
+
+  const downloadPath = `${WORKSPACE_DOWNLOAD_PATH}/${workspaceId}/download.tar.gz`;
+  await $`curl -sL ${downloadPath} | tar -xz -C ${workspaceCachePath}`;
+}
+```
+
+Reference: `/home/daytona/workspace/source/ahh-binary/src/commands/workspace/main.ts:12-18`
+
+### Workspace Loading
+
+Cached workspaces are copied to the target location:
+
+```typescript
+async function loadWorkspace(workspaceId: string, loc: string) {
+  const workspaceCachePath = path.join(WORKSPACE_CACHE_DIR, workspaceId);
+  await mkdirAlways(loc);
+  await $`cp -r ${workspaceCachePath}/* ${loc}`;
+}
+```
+
+Reference: `/home/daytona/workspace/source/ahh-binary/src/commands/workspace/main.ts:20-24`
+
+### Initialization Flow
+
+The complete initialization process:
+
+```typescript
+export async function initWorkspace(workspaceId: string, loc?: string) {
+  const workspaceCachePath = path.join(WORKSPACE_CACHE_DIR, workspaceId);
+  
+  // Download only if not cached
+  if (!(await exists(workspaceCachePath))) {
+    await downloadAndCacheWorkspace(workspaceId);
+  }
+
+  // Use provided path or default to workspace name
+  const targetLocation = loc || path.join(".", workspaceId);
+  await mkdirAlways(targetLocation);
+  
+  // Copy cached workspace to target
+  await loadWorkspace(workspaceId, targetLocation);
+}
+```
+
+Reference: `/home/daytona/workspace/source/ahh-binary/src/commands/workspace/main.ts:26-35`
+
+### Workspace Directory Structure
+
+Workspaces are stored in your home directory:
+
+```typescript
+const WORKSPACE_DIR = path.join(HOME_DIR, "workspaces");
+const WORKSPACE_CACHE_DIR = path.join(WORKSPACE_DIR, "cache");
+```
+
+Typical structure:
+```
+~/.ahh/workspaces/
+└── cache/
+    ├── python-pwntools-interact/
+    │   ├── solve.py
+    │   ├── requirements.txt
+    │   └── ...
+    └── web-xss-template/
+        ├── index.html
+        ├── payloads.js
+        └── ...
+```
+
+Reference: `/home/daytona/workspace/source/ahh-binary/src/commands/workspace/main.ts:6-10`
+
+### Workspace Registry
+
+Available workspaces are defined in a constants file:
+
+```typescript
+export const WORKSPACE_CHOICES = [
+  "python-pwntools-interact",
+  "web-xss-template",
+] as const;
+```
+
+Reference: `/home/daytona/workspace/source/ahh-binary/src/commands/workspace/choices.ts:1-4`
+
+## Command Line Interface
+
+The workspace command uses yargs for argument parsing:
+
+```typescript
+.command(
+  "workspace <name>",
+  "Initialize a workspace.",
+  (yargs) =>
+    yargs
+      .positional("name", {
+        type: "string",
+        description: "Name of the workspace",
+        demandOption: true,
+        choices: WORKSPACE_CHOICES,
+      })
+      .option("path", {
+        alias: "p",
+        type: "string",
+        description: "Path to load the workspace",
+      }),
+  async (argv) => {
+    const { name, path } = argv;
+    const stopSpin = startSpinner("Initializing workspace...");
+    await initWorkspace(name, path);
+    stopSpin();
+    console.log("Workspace initialized.");
+  }
+)
+```
+
+Reference: From `/home/daytona/workspace/source/ahh-binary/main.ts:102-124`
+
+## Use Cases
+
+<Tabs>
+  <Tab title="CTF Challenges">
+    Perfect for Capture The Flag competitions:
+    
+    ```bash
+    # Start a binary exploitation challenge
+    ahh workspace python-pwntools-interact
+    cd python-pwntools-interact
+    
+    # Edit solve.py and run
+    python solve.py
+    ```
+    
+    Benefits:
+    - No dependency installation
+    - Pre-configured pwntools
+    - Ready-to-use templates
+  </Tab>
+  
+  <Tab title="Security Testing">
+    Quickly set up security testing environments:
+    
+    ```bash
+    # Initialize XSS testing environment
+    ahh workspace web-xss-template
+    cd web-xss-template
+    
+    # Serve the test page
+    ahh serve
+    ```
+    
+    Benefits:
+    - Pre-built test pages
+    - Common payload examples
+    - Instant setup
+  </Tab>
+  
+  <Tab title="Learning & Demos">
+    Use for teaching or demonstrations:
+    
+    ```bash
+    # Create multiple instances for students
+    ahh workspace python-pwntools-interact --path ~/student1
+    ahh workspace python-pwntools-interact --path ~/student2
+    ```
+    
+    Benefits:
+    - Consistent environments
+    - No setup time
+    - Reproducible results
+  </Tab>
+</Tabs>
+
+## Workspace Sources
+
+Workspaces are downloaded from:
+
+```typescript
+export const WORKSPACE_DOWNLOAD_PATH = DEV
+  ? "https://localhost:3000/workspaces"
+  : "https://cli.ahh.bet/workspaces";
+```
+
+Reference: From `/home/daytona/workspace/source/ahh-binary/src/constants/main.ts:11-13`
+
+The download URL format is:
+```
+https://cli.ahh.bet/workspaces/{workspace-name}/download.tar.gz
+```
+
+## Performance Optimization
+
+### Caching Strategy
+
+The implementation uses smart caching:
+
+1. **First use:** Downloads and caches the workspace
+2. **Subsequent uses:** Copies from local cache (nearly instant)
+3. **Multiple projects:** Each initialization copies from cache
+
+### Parallel Operations
+
+The download and extraction happen in a single command:
+
+```bash
+curl -sL {url} | tar -xz -C {cache-dir}
+```
+
+This streams the download directly to extraction, saving disk I/O.
+
+## Advanced Usage
+
+### Multiple Instances
+
+Create multiple instances of the same workspace:
+
+```bash
+ahh workspace python-pwntools-interact --path challenge1
+ahh workspace python-pwntools-interact --path challenge2
+ahh workspace python-pwntools-interact --path challenge3
+```
+
+### Custom Locations
+
+Organize workspaces in your project structure:
+
+```bash
+mkdir -p ~/ctf/2024/pwn
+ahh workspace python-pwntools-interact --path ~/ctf/2024/pwn/challenge1
+```
+
+### Programmatic Usage
+
+```typescript
+import { initWorkspace } from './src/commands/workspace/main';
+
+// Initialize workspace programmatically
+await initWorkspace('python-pwntools-interact', './my-challenge');
+
+console.log('Workspace ready!');
+```
+
+## Troubleshooting
+
+<Accordion title="Download fails or times out">
+  Solutions:
+  
+  - Check your internet connection
+  - Verify the workspace name is correct
+  - Try again (downloads can sometimes fail)
+  - Check if `https://cli.ahh.bet` is accessible
+</Accordion>
+
+<Accordion title="Directory already exists">
+  If the target directory exists:
+  
+  ```bash
+  # Use a different name
+  ahh workspace python-pwntools-interact --path ./my-custom-name
+  
+  # Or remove the existing directory
+  rm -rf python-pwntools-interact
+  ahh workspace python-pwntools-interact
+  ```
+</Accordion>
+
+<Accordion title="Cache corruption">
+  If you suspect cache corruption:
+  
+  ```bash
+  # Clear the cache for a specific workspace
+  rm -rf ~/.ahh/workspaces/cache/python-pwntools-interact
+  
+  # Re-initialize (will re-download)
+  ahh workspace python-pwntools-interact
+  ```
+</Accordion>
+
+<Accordion title="Permission errors">
+  Ensure you have write permissions:
+  
+  ```bash
+  # Check cache directory permissions
+  ls -la ~/.ahh/workspaces/
+  
+  # Fix permissions if needed
+  chmod -R u+w ~/.ahh/workspaces/
+  ```
+</Accordion>
+
+## Best Practices
+
+1. **Use descriptive paths** - When using `--path`, choose meaningful names
+2. **Cache awareness** - First download may be slow; subsequent uses are fast
+3. **Version control** - Consider adding initialized workspaces to `.gitignore`
+4. **Customize after init** - Workspaces are templates; modify them for your needs
+5. **Clean up** - Remove unused workspace instances to save disk space
+
+## Creating Custom Workspaces
+
+<Warning>
+Custom workspace creation requires access to the Ahh workspace repository. This feature is designed for administrators and workspace maintainers.
+</Warning>
+
+Workspace structure requirements:
+
+```
+my-workspace/
+├── README.md           # Workspace documentation
+├── setup.sh           # Optional setup script
+└── ...                # Your files and directories
+```
+
+Packaging:
+```bash
+tar -czf download.tar.gz -C my-workspace .
+```
+
+## Cache Management
+
+### View Cache Size
+
+```bash
+du -sh ~/.ahh/workspaces/cache
+```
+
+### Clear All Cached Workspaces
+
+```bash
+rm -rf ~/.ahh/workspaces/cache/*
+```
+
+### Clear Specific Workspace Cache
+
+```bash
+rm -rf ~/.ahh/workspaces/cache/python-pwntools-interact
+```
+
+## Related Commands
+
+While workspaces are standalone, they work well with other Ahh features:
+
+```bash
+# Initialize workspace and serve it
+ahh workspace web-xss-template
+cd web-xss-template
+ahh serve
+
+# Initialize and share files
+ahh workspace python-pwntools-interact
+cd python-pwntools-interact
+ahh serve --port 3000
+```
+
+## Technical Reference
+
+### Command Options
+
+| Option | Alias | Type | Required | Description |
+|--------|-------|------|----------|-------------|
+| `name` | - | string | Yes | Name of the workspace (positional) |
+| `--path` | `-p` | string | No | Custom path for workspace |
+
+### Workspace Choices
+
+Valid workspace names are enforced at the CLI level:
+
+```typescript
+choices: WORKSPACE_CHOICES
+```
+
+Invalid names will show an error:
+```
+Invalid values:
+  Argument: name, Given: "invalid-name", Choices: "python-pwntools-interact", "web-xss-template"
+```
+
+### Directory Locations
+
+- **Cache directory:** `~/.ahh/workspaces/cache/`
+- **Default output:** `./{workspace-name}`
+- **Custom output:** User-specified via `--path`
+
+### Dependencies
+
+- **curl**: For downloading workspace archives
+- **tar**: For extracting compressed workspaces
+- **Bun**: For shell command execution

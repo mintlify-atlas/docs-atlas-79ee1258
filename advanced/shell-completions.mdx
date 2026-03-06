@@ -1,0 +1,266 @@
+---
+title: Shell Completions
+description: Set up tab completion for Ahh CLI in your shell
+---
+
+Ahh CLI provides shell completion support for bash, zsh, and fish, making it easier to discover and use commands.
+
+## How Completions Work
+
+Ahh CLI uses the `AHH_COMPLETIONS` environment variable to generate shell completion scripts. When this variable is set to `1`, the CLI outputs a completion script instead of running normal commands.
+
+```typescript
+if (process.env.AHH_COMPLETIONS) {
+  main.showCompletionScript();
+  process.exit(0);
+}
+```
+
+This mechanism is automatically used during installation to generate the completion script at `~/.ahh/_ahh`.
+
+## Automatic Setup
+
+<Note>
+  Shell completions are automatically configured when you install Ahh CLI using the official installation script.
+</Note>
+
+During installation, the script:
+
+1. Generates the completion script:
+   ```bash
+   AHH_COMPLETIONS=1 ~/.ahh/bin/ahh > ~/.ahh/_ahh
+   ```
+
+2. Adds completion sourcing to your shell configuration file
+3. Detects your shell (bash, zsh, or fish) and configures accordingly
+
+## Manual Setup
+
+If you need to set up completions manually or reinstall them:
+
+<Steps>
+  <Step title="Generate completion script">
+    Create the completion script file:
+    ```bash
+    AHH_COMPLETIONS=1 ahh > ~/.ahh/_ahh
+    ```
+  </Step>
+
+  <Step title="Add to shell configuration">
+    Add the completion script to your shell's configuration file based on your shell:
+
+    <Tabs>
+      <Tab title="Bash">
+        Add to `~/.bashrc`:
+        ```bash
+        # ahh completions
+        [ -s "$HOME/.ahh/_ahh" ] && source "$HOME/.ahh/_ahh"
+        ```
+
+        Then reload:
+        ```bash
+        source ~/.bashrc
+        ```
+      </Tab>
+
+      <Tab title="Zsh">
+        Add to `~/.zshrc`:
+        ```bash
+        # ahh completions
+        [ -s "$HOME/.ahh/_ahh" ] && source "$HOME/.ahh/_ahh"
+        ```
+
+        Then reload:
+        ```bash
+        source ~/.zshrc
+        ```
+      </Tab>
+
+      <Tab title="Fish">
+        Add to `~/.config/fish/config.fish`:
+        ```bash
+        # ahh completions
+        [ -s "$HOME/.ahh/_ahh" ] && source "$HOME/.ahh/_ahh"
+        ```
+
+        Then reload:
+        ```bash
+        source ~/.config/fish/config.fish
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>
+
+## Installation Script Example
+
+The official installation script automatically configures completions for your shell. Here's how it works:
+
+```bash
+# Generate completion script
+AHH_COMPLETIONS=1 "$exe" > "$install_dir/_ahh"
+
+# Detect shell type
+shell_type=$(basename "$SHELL")
+
+case "$shell_type" in
+  fish)
+    shell_config="$HOME/.config/fish/config.fish"
+    ;;
+  zsh)
+    shell_config="$HOME/.zshrc"
+    ;;
+  bash)
+    shell_config="$HOME/.bashrc"
+    ;;
+esac
+
+# Add completion sourcing to shell config
+echo -e "# ahh completions" >> "$shell_config"
+echo -e "[ -s \"$install_dir/_ahh\" ] && source \"$install_dir/_ahh\"" >> "$shell_config"
+```
+
+<Note>
+  The script checks if completions are already configured to avoid duplicate entries in your shell configuration.
+</Note>
+
+## Using Completions
+
+Once configured, you can use tab completion to:
+
+### Complete Commands
+
+Press `Tab` after typing `ahh` to see available commands:
+
+```bash
+ahh [Tab]
+# Shows: clip, qr, serve, share-discord, tunnel, update, webhook, workspace
+```
+
+### Complete Options
+
+Press `Tab` after typing a command to see its options:
+
+```bash
+ahh tunnel --[Tab]
+# Shows: --port, -p, --help
+```
+
+### Complete Arguments
+
+For commands with predefined choices, tab completion shows available values:
+
+```bash
+ahh workspace [Tab]
+# Shows available workspace templates
+```
+
+## Verifying Completions
+
+<Steps>
+  <Step title="Check completion file exists">
+    ```bash
+    ls -la ~/.ahh/_ahh
+    ```
+    The file should exist and contain shell completion code.
+  </Step>
+
+  <Step title="Check shell configuration">
+    Verify the completion is sourced in your shell config:
+    ```bash
+    # For bash
+    grep "ahh completions" ~/.bashrc
+
+    # For zsh
+    grep "ahh completions" ~/.zshrc
+
+    # For fish
+    grep "ahh completions" ~/.config/fish/config.fish
+    ```
+  </Step>
+
+  <Step title="Test completion">
+    Open a new terminal and try tab completion:
+    ```bash
+    ahh [Tab]
+    ```
+    You should see a list of available commands.
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Completions not working">
+    **Solutions:**
+
+    1. Verify the completion file exists:
+       ```bash
+       cat ~/.ahh/_ahh
+       ```
+
+    2. Check if it's sourced in your shell config:
+       ```bash
+       cat ~/.zshrc | grep ahh  # or ~/.bashrc for bash
+       ```
+
+    3. Reload your shell configuration:
+       ```bash
+       source ~/.zshrc  # or source ~/.bashrc for bash
+       ```
+
+    4. Regenerate the completion script:
+       ```bash
+       AHH_COMPLETIONS=1 ahh > ~/.ahh/_ahh
+       ```
+  </Accordion>
+
+  <Accordion title="Completions show old commands">
+    If completions show outdated commands after an update, regenerate the completion script:
+
+    ```bash
+    # Regenerate completions
+    AHH_COMPLETIONS=1 ahh > ~/.ahh/_ahh
+
+    # Reload shell
+    source ~/.zshrc  # or appropriate config file
+    ```
+  </Accordion>
+
+  <Accordion title="Unsupported shell">
+    The installation script supports bash, zsh, and fish. For other shells:
+
+    1. Generate the completion script:
+       ```bash
+       AHH_COMPLETIONS=1 ahh > ~/.ahh/_ahh
+       ```
+
+    2. Manually add sourcing to your shell's configuration file:
+       ```bash
+       [ -s "$HOME/.ahh/_ahh" ] && source "$HOME/.ahh/_ahh"
+       ```
+
+    <Note>
+      The completion script uses bash-compatible syntax, so it may work with other bash-compatible shells.
+    </Note>
+  </Accordion>
+</AccordionGroup>
+
+## Updating Completions
+
+When you update Ahh CLI, you should regenerate the completion script to ensure it includes any new commands or options:
+
+```bash
+# Update CLI
+ahh update
+
+# Regenerate completions
+AHH_COMPLETIONS=1 ahh > ~/.ahh/_ahh
+
+# Reload shell
+source ~/.zshrc  # or appropriate config file
+```
+
+<Warning>
+  Always regenerate completions after updating the CLI to ensure they match the current version's commands and options.
+</Warning>

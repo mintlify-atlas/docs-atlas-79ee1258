@@ -1,0 +1,300 @@
+---
+title: "ahh update"
+description: "Update the Ahh CLI to the latest version"
+---
+
+## Overview
+
+The `update` command checks for the latest version of Ahh CLI and updates it automatically. It fetches the latest release from GitHub and runs the installation script.
+
+## Syntax
+
+```bash
+ahh update
+```
+
+## Parameters
+
+This command takes no parameters.
+
+## Usage Examples
+
+<CodeGroup>
+```bash Basic Update
+# Check for and install updates
+ahh update
+```
+
+```bash In Update Scripts
+#!/bin/bash
+# Update all development tools
+
+ahh update
+brew upgrade
+npm update -g
+```
+</CodeGroup>
+
+## Output
+
+### Already Up to Date
+
+If you're running the latest version:
+```bash
+You are already on the latest version (v1.0.6).
+```
+
+### Update Available
+
+If a newer version exists:
+```bash
+New version available: 1.0.7. You are on 1.0.6.
+[Installation proceeds...]
+```
+
+### Manual Update Instructions
+
+If the automatic update fails:
+```bash
+Unexpected response from server.
+You can manually update using:
+curl -fsSL https://install.ahh.bet | bash
+```
+
+## How It Works
+
+### Update Process
+
+1. **Check Latest Release**
+   - Fetches GitHub releases page
+   - Follows redirect to latest release
+   - Extracts version number from URL
+
+2. **Version Comparison**
+   - Compares current version with latest
+   - Uses semantic versioning (semver) comparison
+   - Determines if update is needed
+
+3. **Installation**
+   - Downloads installation script if update needed
+   - Executes script with bash
+   - Replaces current binary
+
+### Version Detection
+
+The command uses GitHub's redirect behavior:
+```
+https://github.com/user/repo/releases/latest
+→ https://github.com/user/repo/releases/tag/ahh_v1.0.6
+```
+
+Extracts version from the tag format: `ahh_v{version}`
+
+## Semantic Versioning
+
+### Version Format
+
+```
+MAJOR.MINOR.PATCH
+1.0.6
+```
+
+### Comparison Rules
+
+- Compares major version first
+- Then minor version
+- Finally patch version
+
+Examples:
+- `1.0.6` < `1.0.7` (patch update)
+- `1.0.6` < `1.1.0` (minor update)
+- `1.0.6` < `2.0.0` (major update)
+- `1.0.6` = `1.0.6` (no update)
+
+## Installation Script
+
+The update runs the official installation script:
+
+```bash
+curl -fsSL https://install.ahh.bet | bash
+```
+
+### What the Script Does
+
+1. Detects your operating system and architecture
+2. Downloads the appropriate binary
+3. Installs to `/usr/local/bin/ahh` (or platform equivalent)
+4. Sets executable permissions
+5. Verifies installation
+
+<Note>
+  The installation script may require sudo permissions depending on your system configuration.
+</Note>
+
+## Error Handling
+
+### Network Errors
+
+If the update check fails due to network issues:
+```
+Unexpected response from server.
+You can manually update using:
+curl -fsSL https://install.ahh.bet | bash
+```
+
+### Invalid Response
+
+If GitHub returns an unexpected response:
+- Missing redirect (not 302)
+- Missing location header
+- Invalid version format
+- Non-semver version
+
+All trigger the manual update message.
+
+### Installation Failure
+
+If the installation script fails:
+```
+Unexpected response from server.
+You can manually update using:
+curl -fsSL https://install.ahh.bet | bash
+```
+
+Common causes:
+- Permission denied (need sudo)
+- Network interruption
+- Disk space issues
+
+## Manual Update
+
+If automatic update fails, update manually:
+
+```bash
+curl -fsSL https://install.ahh.bet | bash
+```
+
+Or with sudo:
+```bash
+curl -fsSL https://install.ahh.bet | sudo bash
+```
+
+## Version Checking
+
+### Check Current Version
+
+```bash
+ahh --version
+```
+
+<Note>
+  The `--version` flag is hidden in the help output but still functional.
+</Note>
+
+### Release Page
+
+View all releases:
+```
+https://github.com/[user]/[repo]/releases
+```
+
+## Update Frequency
+
+<Note>
+  It's recommended to update regularly to get:
+  - New features
+  - Bug fixes
+  - Security patches
+  - Performance improvements
+</Note>
+
+### Checking for Updates
+
+Run `ahh update` periodically:
+- After seeing a new release announcement
+- When encountering bugs (may be fixed in newer version)
+- Before starting a new project
+- As part of your tool maintenance routine
+
+## Technical Details
+
+### HTTP Redirect Handling
+
+The update check uses:
+```javascript
+fetch(RELEASES_URL, { redirect: "manual" })
+```
+
+This captures the 302 redirect without following it, allowing version extraction from the `Location` header.
+
+### Version Regex
+
+```javascript
+/tag\/ahh_v(\d+\.\d+\.\d+)/
+```
+
+Matches version tags like:
+- `tag/ahh_v1.0.6` ✓
+- `tag/ahh_v2.1.0` ✓
+- `tag/v1.0.6` ✗ (missing `ahh_` prefix)
+
+### Installation Script Execution
+
+```bash
+curl -fsSL ${INSTALL_SCRIPT_LINK} | bash
+```
+
+Flags:
+- `-f`: Fail silently on HTTP errors
+- `-s`: Silent mode (no progress bar)
+- `-S`: Show errors even in silent mode
+- `-L`: Follow redirects
+
+## Exit Codes
+
+- `0`: Success (updated or already latest version)
+- `Non-zero`: Update failed
+
+## Notes
+
+<Note>
+  The update command preserves your configuration file (`~/.ahh/config.json`). Your webhooks, workspaces, and settings are not affected.
+</Note>
+
+<Warning>
+  Major version updates (e.g., 1.x.x to 2.x.x) may include breaking changes. Check the release notes before updating.
+</Warning>
+
+## Troubleshooting
+
+### Permission Denied
+
+```bash
+# Try with sudo
+sudo ahh update
+
+# Or manual install with sudo
+curl -fsSL https://install.ahh.bet | sudo bash
+```
+
+### Network Issues
+
+```bash
+# Check connectivity
+curl -I https://install.ahh.bet
+
+# Try manual download
+wget https://install.ahh.bet
+bash install.ahh.bet
+```
+
+### Version Not Detected
+
+If the version check fails:
+- Check internet connection
+- Verify GitHub is accessible
+- Try manual update
+
+## Related Commands
+
+- [workspace](/commands/workspace) - Workspace templates may be updated in new versions

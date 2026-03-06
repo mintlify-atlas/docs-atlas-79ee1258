@@ -1,0 +1,263 @@
+---
+title: Troubleshooting
+description: Common issues and solutions for Ahh CLI
+---
+
+This guide covers common issues you might encounter while using Ahh CLI and their solutions.
+
+## Installation Issues
+
+<AccordionGroup>
+  <Accordion title="Failed to download the archive">
+    This error occurs when the installation script cannot download the CLI binary from GitHub releases.
+
+    **Possible causes:**
+    - No internet connection
+    - GitHub releases are temporarily unavailable
+    - Firewall or proxy blocking the download
+
+    **Solutions:**
+    ```bash
+    # Check your internet connection
+    curl -I https://github.com
+
+    # Try downloading manually
+    curl -L https://github.com/abhishekg999/ahh/releases/latest/download/ahh-dist-linux.tar.gz -o ahh.tar.gz
+    ```
+
+    <Note>
+      The install script automatically detects your OS (Linux/macOS) and downloads the appropriate binary.
+    </Note>
+  </Accordion>
+
+  <Accordion title="curl is required">
+    The installation script requires `curl` to download the CLI.
+
+    **Install curl:**
+    ```bash
+    # Ubuntu/Debian
+    sudo apt-get install curl
+
+    # macOS
+    brew install curl
+
+    # Fedora
+    sudo dnf install curl
+    ```
+  </Accordion>
+
+  <Accordion title="Unsupported operating system">
+    Ahh CLI currently supports only Linux and macOS (Darwin).
+
+    If you see this error on Windows, consider using:
+    - Windows Subsystem for Linux (WSL)
+    - A Linux virtual machine
+  </Accordion>
+</AccordionGroup>
+
+## Tunnel Issues
+
+### Rate Limiting Errors
+
+<Warning>
+  Cloudflare may rate limit free tunnel creation requests, especially if you're creating many tunnels in a short period.
+</Warning>
+
+The following errors indicate rate limiting:
+
+```text
+invalid character 'e'
+429 Too Many Requests
+```
+
+When rate limited, you'll see:
+```text
+Rate limited creating free tunnel. Configure a tunnel on your domain to avoid rate limits.
+```
+
+**Solutions:**
+
+<Steps>
+  <Step title="Wait and retry">
+    Wait a few minutes before creating another tunnel. Cloudflare's rate limits are temporary.
+  </Step>
+
+  <Step title="Use your own domain">
+    Configure a Cloudflare tunnel on your own domain to avoid rate limits on the free `trycloudflare.com` service.
+
+    ```bash
+    # Install cloudflared
+    brew install cloudflare/cloudflare/cloudflared
+
+    # Login and configure your tunnel
+    cloudflared tunnel login
+    cloudflared tunnel create my-tunnel
+    ```
+  </Step>
+
+  <Step title="Reuse existing tunnels">
+    Instead of creating new tunnels frequently, try to reuse existing tunnel connections when possible.
+  </Step>
+</Steps>
+
+### Tunnel Connection Failed
+
+<Accordion title="cloudflared not found">
+  Ahh CLI requires `cloudflared` to create tunnels.
+
+  **Install cloudflared:**
+  ```bash
+  # macOS
+  brew install cloudflare/cloudflare/cloudflared
+
+  # Linux (Debian/Ubuntu)
+  wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+  sudo dpkg -i cloudflared-linux-amd64.deb
+
+  # Linux (RHEL/CentOS)
+  wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-x86_64.rpm
+  sudo rpm -i cloudflared-linux-x86_64.rpm
+  ```
+
+  Verify installation:
+  ```bash
+  cloudflared --version
+  ```
+</Accordion>
+
+<Accordion title="Port already in use">
+  If the port you're trying to tunnel is already in use:
+
+  ```bash
+  # Check what's using the port
+  lsof -i :8000
+
+  # Or use a different port
+  ahh tunnel --port 8001
+  ```
+</Accordion>
+
+## Permission Errors
+
+<AccordionGroup>
+  <Accordion title="Permission denied when installing">
+    The installation script installs to `~/.ahh` which shouldn't require sudo.
+
+    If you encounter permission issues:
+    ```bash
+    # Check directory permissions
+    ls -la ~/ | grep .ahh
+
+    # Fix permissions if needed
+    chmod -R 755 ~/.ahh
+    ```
+
+    <Warning>
+      Never run the installation script with `sudo`. This can cause permission issues later.
+    </Warning>
+  </Accordion>
+
+  <Accordion title="Command not found: ahh">
+    This means the binary isn't in your PATH.
+
+    **Solutions:**
+    ```bash
+    # Reload your shell configuration
+    # For bash:
+    source ~/.bashrc
+
+    # For zsh:
+    source ~/.zshrc
+
+    # For fish:
+    source ~/.config/fish/config.fish
+
+    # Or manually add to PATH
+    export PATH="$HOME/.ahh/bin:$PATH"
+    ```
+
+    Verify installation:
+    ```bash
+    which ahh
+    # Should output: /home/username/.ahh/bin/ahh
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Update Issues
+
+<Accordion title="Unexpected response from server">
+  This error occurs when the update command cannot fetch the latest version information from GitHub.
+
+  **Manual update:**
+  ```bash
+  curl -fsSL https://cli.abhishekg.net/install.sh | bash
+  ```
+
+  <Note>
+    The update command checks GitHub releases to determine if a newer version is available.
+  </Note>
+</Accordion>
+
+## Debug Tips
+
+<Steps>
+  <Step title="Check version">
+    Verify you're running the latest version:
+    ```bash
+    ahh update
+    ```
+  </Step>
+
+  <Step title="Verify dependencies">
+    Ensure all required tools are installed:
+    ```bash
+    # Check cloudflared
+    which cloudflared
+
+    # Check curl
+    which curl
+    ```
+  </Step>
+
+  <Step title="Check configuration">
+    Review your shell configuration:
+    ```bash
+    # For bash
+    cat ~/.bashrc | grep ahh
+
+    # For zsh
+    cat ~/.zshrc | grep ahh
+
+    # For fish
+    cat ~/.config/fish/config.fish | grep ahh
+    ```
+  </Step>
+
+  <Step title="Test connectivity">
+    Verify network connectivity:
+    ```bash
+    # Test GitHub access
+    curl -I https://github.com
+
+    # Test Cloudflare access
+    curl -I https://cloudflare.com
+    ```
+  </Step>
+
+  <Step title="Review logs">
+    When running commands, check for error messages in the output. The CLI provides specific error messages for most common issues.
+  </Step>
+</Steps>
+
+## Getting Help
+
+If you're still experiencing issues:
+
+1. Check the [GitHub repository](https://github.com/abhishekg999/ahh) for known issues
+2. Review the command help: `ahh --help`
+3. File an issue with:
+   - Your operating system and version
+   - The exact command you ran
+   - The complete error message
+   - Output of `which ahh` and `cloudflared --version`

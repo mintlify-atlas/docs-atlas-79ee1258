@@ -1,0 +1,434 @@
+---
+title: 'File Serving'
+description: 'Serve static files from any directory with automatic tunneling'
+icon: 'folder-open'
+---
+
+## Overview
+
+The file serving feature turns any directory into a web server instantly. It combines a static file server with automatic tunneling to create a public HTTPS URL, making it perfect for:
+
+- Sharing HTML demos and prototypes
+- Testing static sites before deployment
+- Serving files to mobile devices
+- Quick file sharing over the internet
+
+## How It Works
+
+When you run `ahh serve`, the CLI:
+
+1. Starts a local HTTP server in your current directory
+2. Creates a Cloudflare tunnel to expose it publicly
+3. Generates a public HTTPS URL with QR code
+4. Serves files with proper MIME types
+5. Automatically serves `index.html` for directory requests
+
+<Note>
+The server runs on port 8000 by default but can be customized with the `--port` flag.
+</Note>
+
+## Basic Usage
+
+### Serve Current Directory
+
+```bash
+ahh serve
+```
+
+This starts a server on port 8000 and creates a public tunnel.
+
+### Serve on Custom Port
+
+```bash
+ahh serve --port 3000
+ahh serve -p 8080
+```
+
+### Example Output
+
+```
+Starting server, this may take a second...
+URL: https://xyz-abc-123.trycloudflare.com
+
+█████████████████████████████
+█████████████████████████████
+████ ▄▄▄▄▄ █▀█ █▄█▄█ ▄▄▄▄▄ ████
+████ █   █ █▀▀▀▄ ▀█ █   █ ████
+████ █▄▄▄█ █▀ █▀▀ ▄█ █▄▄▄█ ████
+████▄▄▄▄▄▄▄█▄▀ ▀▄█▄█▄▄▄▄▄▄▄████
+```
+
+## Implementation Details
+
+### Server Creation
+
+The server is built using Elysia with CORS support:
+
+```typescript
+export async function createSimpleServer(port: number) {
+  const server = new Elysia()
+    .use(cors())
+    .get("*", async (ctx) => {
+      try {
+        let pathname = new URL(ctx.request.url).pathname;
+        let safePath = join(cwd(), pathname).replace(/\\.\\./g, "");
+
+        // Check if the path is a directory
+        if (pathname.endsWith("/")) {
+          const indexPath = join(safePath, "index.html");
+          if (existsSync(indexPath)) {
+            safePath = indexPath;
+          }
+        }
+
+        if (!safePath.startsWith(cwd())) {
+          return new Response("Forbidden", { status: 403 });
+        }
+
+        const file = await readFile(safePath);
+        const contentType =
+          mime.getType(safePath) || "application/octet-stream";
+
+        return new Response(file, {
+          headers: {
+            "Content-Type": contentType,
+          },
+        });
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+          return new Response("Not Found", { status: 404 });
+        }
+        return new Response("Internal Server Error", { status: 500 });
+      }
+    })
+    .listen(port);
+
+  return { port, kill: () => server.stop() };
+}
+```
+
+Reference: `/home/daytona/workspace/source/ahh-binary/src/commands/serve/main.ts:9-53`
+
+### Path Security
+
+The implementation includes security measures to prevent directory traversal:
+
+```typescript
+let safePath = join(cwd(), pathname).replace(/\\.\\./g, "");
+
+if (!safePath.startsWith(cwd())) {
+  return new Response("Forbidden", { status: 403 });
+}
+```
+
+This ensures:
+- `..` sequences are removed from paths
+- Files can only be served from the current directory and subdirectories
+- Attempts to access parent directories return 403 Forbidden
+
+Reference: `/home/daytona/workspace/source/ahh-binary/src/commands/serve/main.ts:15-27`
+
+### Automatic Index Files
+
+When a directory is requested, the server automatically looks for `index.html`:
+
+```typescript
+if (pathname.endsWith("/")) {
+  const indexPath = join(safePath, "index.html");
+  if (existsSync(indexPath)) {
+    safePath = indexPath;
+  }
+}
+```
+
+Reference: `/home/daytona/workspace/source/ahh-binary/src/commands/serve/main.ts:18-23`
+
+### MIME Type Detection
+
+Files are served with correct Content-Type headers using the `mime` library:
+
+```typescript
+const contentType = mime.getType(safePath) || "application/octet-stream";
+
+return new Response(file, {
+  headers: {
+    "Content-Type": contentType,
+  },
+});
+```
+
+Reference: `/home/daytona/workspace/source/ahh-binary/src/commands/serve/main.ts:30-36`
+
+### Error Handling
+
+The server handles common errors gracefully:
+
+```typescript
+catch (error) {
+  if ((error as NodeJS.ErrnoException).code === "ENOENT") {
+    return new Response("Not Found", { status: 404 });
+  }
+  return new Response("Internal Server Error", { status: 500 });
+}
+```
+
+Reference: `/home/daytona/workspace/source/ahh-binary/src/commands/serve/main.ts:39-44`
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="Demo Sharing" icon="presentation-screen">
+    Share HTML/CSS/JS demos with clients or teammates without deployment.
+  </Card>
+  
+  <Card title="Mobile Testing" icon="mobile">
+    Scan the QR code to test your static site on mobile devices instantly.
+  </Card>
+  
+  <Card title="Static Site Preview" icon="eye">
+    Preview static site generators (Hugo, Jekyll, etc.) before deploying.
+  </Card>
+  
+  <Card title="File Distribution" icon="share-nodes">
+    Quickly share files with others over the internet.
+  </Card>
+</CardGroup>
+
+## Directory Structure
+
+Here's how different file structures are served:
+
+<Tabs>
+  <Tab title="Simple Site">
+    ```
+    my-site/
+    ├── index.html
+    ├── style.css
+    └── script.js
+    ```
+    
+    Access:
+    - `https://your-url/` → serves `index.html`
+    - `https://your-url/style.css` → serves `style.css`
+    - `https://your-url/script.js` → serves `script.js`
+  </Tab>
+  
+  <Tab title="Multi-Page Site">
+    ```
+    my-site/
+    ├── index.html
+    ├── about/
+    │   └── index.html
+    └── assets/
+        ├── style.css
+        └── images/
+            └── logo.png
+    ```
+    
+    Access:
+    - `https://your-url/` → serves `index.html`
+    - `https://your-url/about/` → serves `about/index.html`
+    - `https://your-url/assets/style.css` → serves the CSS file
+    - `https://your-url/assets/images/logo.png` → serves the image
+  </Tab>
+  
+  <Tab title="Build Output">
+    ```
+    dist/
+    ├── index.html
+    ├── bundle.js
+    └── assets/
+        └── main.css
+    ```
+    
+    From the `dist/` directory:
+    ```bash
+    cd dist
+    ahh serve
+    ```
+    
+    Your built application is now publicly accessible.
+  </Tab>
+</Tabs>
+
+## Parallel Execution
+
+The serve command starts the server and tunnel in parallel for faster startup:
+
+```typescript
+const [, { url: tunnelUrl }] = await Promise.all([
+  createSimpleServer(argv.port),
+  tunnel(argv.port),
+]);
+```
+
+Reference: From `/home/daytona/workspace/source/ahh-binary/main.ts:69-72`
+
+## Security Features
+
+<Warning>
+While the server includes basic security measures, it's designed for development use only. Don't use it to serve sensitive files or in production.
+</Warning>
+
+### Path Traversal Protection
+
+✅ **Protected:**
+```
+GET /../../../etc/passwd → 403 Forbidden
+GET /..%2F..%2Fetc → 403 Forbidden
+```
+
+✅ **Allowed:**
+```
+GET /index.html → 200 OK
+GET /subdirectory/file.js → 200 OK
+```
+
+### CORS Configuration
+
+The server enables CORS for all origins:
+
+```typescript
+.use(cors())
+```
+
+This allows:
+- Cross-origin requests from any domain
+- Testing with different frontend origins
+- Mobile device access
+
+## Supported File Types
+
+The server automatically detects and serves files with correct MIME types:
+
+| Extension | MIME Type | Example |
+|-----------|-----------|----------|
+| `.html` | text/html | index.html |
+| `.css` | text/css | style.css |
+| `.js` | application/javascript | app.js |
+| `.json` | application/json | data.json |
+| `.png` | image/png | logo.png |
+| `.jpg` | image/jpeg | photo.jpg |
+| `.svg` | image/svg+xml | icon.svg |
+| `.pdf` | application/pdf | document.pdf |
+| `.woff2` | font/woff2 | font.woff2 |
+
+Unknown types fallback to `application/octet-stream`.
+
+## Advanced Usage
+
+### Serve Specific Build Directories
+
+```bash
+# Vite
+cd dist && ahh serve
+
+# Next.js
+cd out && ahh serve
+
+# Create React App
+cd build && ahh serve
+```
+
+### Custom Port for Multiple Servers
+
+Run multiple servers on different ports:
+
+```bash
+# Terminal 1 - Frontend
+cd frontend && ahh serve --port 3000
+
+# Terminal 2 - Docs
+cd docs && ahh serve --port 3001
+```
+
+### Programmatic Usage
+
+```typescript
+import { createSimpleServer } from './src/commands/serve/main';
+import { tunnel } from './src/commands/tunnel/main';
+
+const { port, kill } = await createSimpleServer(8000);
+const { url } = await tunnel(port);
+
+console.log('Serving at:', url);
+
+// Later, cleanup
+kill();
+```
+
+## Troubleshooting
+
+<Accordion title="404 Not Found for files that exist">
+  Check:
+  
+  - File path case sensitivity (Linux/Mac are case-sensitive)
+  - File is in current directory or subdirectory
+  - You're running `ahh serve` from the correct directory
+  - File name matches URL exactly
+</Accordion>
+
+<Accordion title="403 Forbidden errors">
+  This means you're trying to access files outside the current directory:
+  
+  - Don't use `..` in URLs
+  - Ensure you're in the correct directory when starting the server
+  - Check that the file exists in a subdirectory of where you ran the command
+</Accordion>
+
+<Accordion title="Wrong MIME type / file not rendering">
+  - Ensure file extension is correct (e.g., `.css` not `.txt`)
+  - Check browser console for MIME type errors
+  - Verify file contents are valid for that type
+</Accordion>
+
+<Accordion title="Port already in use">
+  ```bash
+  # Use a different port
+  ahh serve --port 8080
+  ```
+  
+  Or find and kill the process using that port:
+  ```bash
+  lsof -ti:8000 | xargs kill -9
+  ```
+</Accordion>
+
+## Best Practices
+
+1. **Organize your files** - Use a clean directory structure with an `index.html` at the root
+2. **Build before serving** - Run your build process before serving production builds
+3. **Check the directory** - Always verify you're in the correct directory before running `ahh serve`
+4. **Use relative paths** - In your HTML, use relative paths for assets (`./style.css` not `/style.css`)
+5. **Test mobile early** - Use the QR code to test on mobile devices during development
+
+## Related Commands
+
+- [Tunneling](/features/tunneling) - Learn more about tunnel creation and management
+- [Webhook Server](/features/webhook-server) - Receive HTTP requests instead of serving files
+
+## Technical Reference
+
+### Command Options
+
+| Option | Alias | Type | Default | Description |
+|--------|-------|------|---------|-------------|
+| `--port` | `-p` | number | 8000 | Port to run the server on |
+
+### Return Value
+
+The `createSimpleServer` function returns:
+
+```typescript
+{
+  port: number;       // Local port the server is listening on
+  kill: () => void;   // Function to stop the server
+}
+```
+
+### Dependencies
+
+- **Elysia**: Fast web framework
+- **@elysiajs/cors**: CORS middleware
+- **mime**: MIME type detection
+- **Cloudflare tunnel**: For public URL generation

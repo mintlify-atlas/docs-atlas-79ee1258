@@ -1,0 +1,211 @@
+---
+title: "ahh workspace"
+description: "Initialize and download pre-configured workspace templates"
+---
+
+## Overview
+
+The `workspace` command initializes pre-configured development workspace templates. It downloads template files from the Ahh CDN, caches them locally, and copies them to your desired location.
+
+## Syntax
+
+```bash
+ahh workspace <name> [--path <path>]
+```
+
+## Parameters
+
+<ParamField path="name" type="string" required>
+  The name of the workspace template to initialize. Must be one of the available workspace choices.
+  
+  **Available workspaces:**
+  - `python-pwntools-interact` - Python workspace with pwntools for CTF challenges
+  - `web-xss-template` - Web security testing template for XSS vulnerabilities
+</ParamField>
+
+<ParamField path="path" type="string" optional>
+  Custom path where the workspace should be initialized. If not specified, creates a directory with the workspace name in the current directory.
+  
+  **Aliases:** `-p`
+</ParamField>
+
+## Usage Examples
+
+<CodeGroup>
+```bash Default Location
+# Initialize in current directory
+ahh workspace python-pwntools-interact
+# Creates: ./python-pwntools-interact/
+
+ahh workspace web-xss-template
+# Creates: ./web-xss-template/
+```
+
+```bash Custom Path
+# Initialize at a specific location
+ahh workspace python-pwntools-interact --path ~/projects/ctf
+
+# Using short alias
+ahh workspace web-xss-template -p /tmp/xss-test
+```
+
+```bash Real-World Examples
+# Set up a CTF challenge workspace
+ahh workspace python-pwntools-interact
+cd python-pwntools-interact
+
+# Create an XSS testing environment
+mkdir ~/security-testing
+ahh workspace web-xss-template -p ~/security-testing/xss
+cd ~/security-testing/xss
+```
+</CodeGroup>
+
+## Output
+
+The command displays:
+- A spinner: "Initializing workspace..."
+- Success message: "Workspace initialized."
+
+```bash Example Output
+Initializing workspace...
+Workspace initialized.
+```
+
+## How It Works
+
+### Workspace Caching
+
+1. **First Time**: Downloads the workspace template from the CDN
+   - Downloads to `~/.ahh/workspaces/cache/<workspace-name>/`
+   - Extracts the tarball
+   - Copies files to target location
+
+2. **Subsequent Uses**: Uses cached version
+   - Skips download if cache exists
+   - Directly copies from cache to target location
+   - Much faster initialization
+
+### Directory Structure
+
+```
+~/.ahh/workspaces/
+├── cache/
+│   ├── python-pwntools-interact/
+│   └── web-xss-template/
+└── [target locations specified by user]
+```
+
+## Available Workspaces
+
+### python-pwntools-interact
+
+A Python workspace pre-configured for CTF binary exploitation challenges.
+
+**Includes:**
+- pwntools library setup
+- Interactive exploit templates
+- Common CTF utilities
+
+**Use cases:**
+- Binary exploitation challenges
+- Reverse engineering tasks
+- CTF competitions
+
+### web-xss-template
+
+A web security testing template focused on XSS vulnerability testing.
+
+**Includes:**
+- XSS payload templates
+- Testing utilities
+- Example vulnerable pages
+
+**Use cases:**
+- Web security assessments
+- XSS vulnerability research
+- Security training
+
+## Technical Details
+
+### Download Process
+
+Workspaces are downloaded from:
+```
+https://[CDN_URL]/workspaces/<workspace-name>/download.tar.gz
+```
+
+The download process:
+1. Creates cache directory if needed
+2. Uses `curl` to download the tarball
+3. Pipes directly to `tar` for extraction
+4. Stores in `~/.ahh/workspaces/cache/<workspace-name>/`
+
+### File Operations
+
+```bash Download Command
+curl -sL <download-url> | tar -xz -C <cache-path>
+```
+
+```bash Copy Command
+cp -r <cache-path>/* <target-location>
+```
+
+## Error Handling
+
+### Invalid Workspace Name
+
+If you provide an invalid workspace name:
+```
+Invalid value for positional argument 'name'
+```
+
+Use one of the available choices:
+- `python-pwntools-interact`
+- `web-xss-template`
+
+### Download Failures
+
+If the download fails (network issues, invalid URL), the command will error during the `curl` operation.
+
+### Directory Already Exists
+
+The command creates the target directory with `mkdir -p`, which:
+- Creates parent directories if needed
+- Succeeds if directory already exists
+- May overwrite files if they already exist in the target
+
+<Warning>
+  If the target directory already contains files with the same names as the workspace template, they will be overwritten without warning.
+</Warning>
+
+## Cache Management
+
+### Viewing Cache
+
+Check your cached workspaces:
+```bash
+ls ~/.ahh/workspaces/cache/
+```
+
+### Clearing Cache
+
+To force re-download of a workspace:
+```bash
+rm -rf ~/.ahh/workspaces/cache/<workspace-name>
+ahh workspace <workspace-name>
+```
+
+## Notes
+
+<Note>
+  Workspaces are cached locally after the first download, making subsequent initializations much faster.
+</Note>
+
+<Note>
+  The workspace templates are maintained by the Ahh team and updated periodically. Clear your cache to get the latest version.
+</Note>
+
+## Related Commands
+
+- [update](/commands/update) - Update the Ahh CLI to the latest version

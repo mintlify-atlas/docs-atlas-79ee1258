@@ -1,0 +1,364 @@
+---
+title: 'Webhook Server'
+description: 'Receive, inspect, and debug webhooks in real-time'
+icon: 'webhook'
+---
+
+## Overview
+
+The Ahh CLI webhook server provides a complete solution for receiving and inspecting HTTP webhooks during development. It automatically creates a local server, tunnels it to the internet, and provides a beautiful web dashboard for viewing incoming requests in real-time.
+
+## How It Works
+
+When you run `ahh webhook`, the CLI:
+
+1. Starts a local Elysia server on the configured port (default: varies by config)
+2. Creates a Cloudflare tunnel to expose the server publicly
+3. Generates a secure authentication token
+4. Opens a web dashboard at `cli.ahh.bet` for viewing requests
+5. Streams all incoming HTTP requests to the dashboard via WebSocket
+
+<Note>
+All webhook data is processed locally and streamed only to your authenticated browser session. No data is stored on remote servers.
+</Note>
+
+## Basic Usage
+
+### Start the Webhook Server
+
+```bash
+ahh webhook
+```
+
+This will:
+- Start a local webhook server
+- Create a public tunnel URL
+- Open your browser to the dashboard
+
+### Example Output
+
+```
+Starting tunnel, this may take a second...
+Webhook URL https://abc-xyz-123.trycloudflare.com
+```
+
+## Architecture
+
+### Server Implementation
+
+The webhook server is built on Elysia with WebSocket support:
+
+```typescript
+export async function createWebhookServer(port: number) {
+  const token = randomUUID();
+  const wsClients = new Set<ElysiaWS>();
+
+  const server = new Elysia()
+    .use(cors({ origin: /cli\\.ahh\\.bet$/ }))
+    .get("/ws", () => {
+      return "OK";
+    })
+    .all("*", (ctx) => {
+      const path = new URL(ctx.request.url).pathname;
+      const logData = {
+        id: randomUUID(),
+        method: ctx.request.method,
+        path: path,
+        timestamp: new Date().toISOString(),
+        headers: filterHeaders(ctx.headers),
+        query: ctx.query,
+        body: ctx.body || "",
+      };
+
+      wsClients.forEach((ws) => {
+        if (ws.readyState === 1) {
+          ws.send(JSON.stringify(logData));
+        }
+      });
+      return "OK";
+    })
+    .listen(port);
+
+  return { token, port, kill: () => server.stop(true) };
+}
+```
+
+Reference: `/home/daytona/workspace/source/ahh-binary/src/commands/webhook/main.ts:22-69`
+
+### Header Filtering
+
+To keep the display clean, certain proxy and CDN headers are filtered out:
+
+```typescript
+function filterHeaders(headers: Record<string, string | undefined>) {
+  const result: Record<string, string | undefined> = {};
+  Object.entries(headers).forEach(([key, value]) => {
+    if (
+      key.toLowerCase().startsWith("cf-") ||
+      key.toLowerCase().startsWith("x-forwarded") ||
+      key.toLowerCase() === "cdn-loop"
+    ) {
+      return;
+    }
+    result[key] = value;
+  });
+
+  return result;
+}
+```
+
+Reference: `/home/daytona/workspace/source/ahh-binary/src/commands/webhook/main.ts:6-20`
+
+This filters out:
+- Cloudflare headers (`cf-*`)
+- Forwarding headers (`x-forwarded-*`)
+- CDN loop detection headers
+
+### WebSocket Authentication
+
+The server uses a UUID token for secure WebSocket connections:
+
+```typescript
+.ws("/ws", {
+  message(ws, message) {
+    if (token !== message) {
+      ws.terminate();
+      return;
+    }
+    wsClients.add(ws);
+    ws.send('"OK"');
+  },
+  close(ws) {
+    wsClients.delete(ws);
+  },
+})
+```
+
+Reference: `/home/daytona/workspace/source/ahh-binary/src/commands/webhook/main.ts:50-62`
+
+## Request Logging
+
+### Captured Data
+
+Each incoming request captures:
+
+```typescript
+const logData = {
+  id: randomUUID(),           // Unique request identifier
+  method: ctx.request.method, // HTTP method (GET, POST, etc.)
+  path: path,                 // Request path
+  timestamp: new Date().toISOString(), // ISO 8601 timestamp
+  headers: filterHeaders(ctx.headers), // Filtered headers
+  query: ctx.query,           // Query parameters
+  body: ctx.body || "",      // Request body
+};
+```
+
+### Real-Time Streaming
+
+Requests are broadcast to all connected WebSocket clients:
+
+```typescript
+wsClients.forEach((ws) => {
+  if (ws.readyState === 1) {
+    ws.send(JSON.stringify(logData));
+  }
+});
+```
+
+## Use Cases
+
+<CardGroup cols={2}>
+  <Card title="GitHub Webhooks" icon="github">
+    Test repository events like pushes, pull requests, and issue comments without deploying.
+  </Card>
+  
+  <Card title="Payment Integration" icon="credit-card">
+    Debug payment webhooks from Stripe, PayPal, or other payment processors.
+  </Card>
+  
+  <Card title="API Development" icon="code">
+    Inspect incoming API requests to understand client behavior and debug issues.
+  </Card>
+  
+  <Card title="Third-Party Services" icon="plug">
+    Receive webhooks from Twilio, SendGrid, or any other service that sends HTTP callbacks.
+  </Card>
+</CardGroup>
+
+## Dashboard Features
+
+The web dashboard provides:
+
+- **Real-time updates**: See requests as they arrive
+- **Request details**: View method, path, headers, query params, and body
+- **Timestamp tracking**: Know exactly when each request was received
+- **Formatted JSON**: Pretty-printed JSON bodies for easy reading
+- **Multiple requests**: View and compare multiple requests side-by-side
+
+## Advanced Usage
+
+### Custom Port Configuration
+
+Configure the default webhook port in your config file:
+
+```typescript
+// The server reads from config
+const { port, token } = await createWebhookServer(
+  (await getConfig()).DEFAULT_WEBHOOK_HTTP_PORT
+);
+```
+
+### Programmatic Usage
+
+Use the webhook server in your own scripts:
+
+```typescript
+import { createWebhookServer } from './src/commands/webhook/main';
+import { tunnel } from './src/commands/tunnel/main';
+
+const { port, token, kill } = await createWebhookServer(3000);
+const { url } = await tunnel(port);
+
+console.log('Webhook URL:', url);
+console.log('Auth token:', token);
+
+// Later, cleanup
+kill();
+```
+
+## Security Considerations
+
+<Warning>
+The webhook server is designed for development use. Always use proper authentication and validation in production.
+</Warning>
+
+### CORS Configuration
+
+The server only allows WebSocket connections from the official dashboard:
+
+```typescript
+.use(cors({ origin: /cli\\.ahh\\.bet$/ }))
+```
+
+### Token-Based Auth
+
+WebSocket connections require the exact token generated at server startup:
+
+```typescript
+if (token !== message) {
+  ws.terminate();
+  return;
+}
+```
+
+### Public Exposure
+
+Be aware that:
+- The webhook URL is publicly accessible
+- Anyone with the URL can send requests
+- All requests are logged and visible in your dashboard
+- Don't use for sensitive production data
+
+## Integration Examples
+
+<Tabs>
+  <Tab title="GitHub">
+    1. Run `ahh webhook`
+    2. Copy the webhook URL
+    3. Go to your GitHub repo Settings → Webhooks
+    4. Add webhook with your URL
+    5. Select events you want to receive
+    6. Save and test the webhook
+    
+    You'll see the test payload in your dashboard immediately.
+  </Tab>
+  
+  <Tab title="Stripe">
+    1. Run `ahh webhook`
+    2. Copy the webhook URL
+    3. Go to Stripe Dashboard → Developers → Webhooks
+    4. Add endpoint with your URL
+    5. Select events to listen for
+    6. Use Stripe CLI to send test events:
+    
+    ```bash
+    stripe trigger payment_intent.succeeded
+    ```
+    
+    View the webhook payload in real-time.
+  </Tab>
+  
+  <Tab title="Custom Service">
+    Send requests using curl or any HTTP client:
+    
+    ```bash
+    curl -X POST https://your-tunnel-url.trycloudflare.com/webhook \
+      -H "Content-Type: application/json" \
+      -d '{"event": "test", "data": {"user_id": 123}}'
+    ```
+    
+    The request will appear in your dashboard with all headers and body data.
+  </Tab>
+</Tabs>
+
+## Troubleshooting
+
+<Accordion title="Dashboard not opening">
+  The CLI tries to automatically open the dashboard. If it doesn't work:
+  
+  1. Copy the Webhook URL from the terminal
+  2. Manually visit `https://cli.ahh.bet/webhook`
+  3. Paste your webhook URL and token when prompted
+</Accordion>
+
+<Accordion title="Requests not appearing">
+  Check that:
+  
+  - The webhook URL is correct and accessible
+  - Your browser has WebSocket connections enabled
+  - You're not behind a firewall blocking WebSockets
+  - The sender is actually making requests (check sender logs)
+</Accordion>
+
+<Accordion title="WebSocket connection failed">
+  Ensure:
+  
+  - You're using the correct authentication token
+  - The dashboard domain is `cli.ahh.bet`
+  - Your network allows WebSocket connections
+</Accordion>
+
+## Best Practices
+
+1. **One webhook server at a time** - Avoid running multiple instances to prevent port conflicts
+2. **Clean up when done** - Stop the server when you're finished testing
+3. **Verify signatures** - When implementing real webhooks, always verify cryptographic signatures
+4. **Use HTTPS** - The tunnel provides HTTPS automatically, ensuring secure transmission
+5. **Test error cases** - Use the webhook server to test how your code handles malformed or unexpected payloads
+
+## Related Commands
+
+- [Tunneling](/features/tunneling) - Learn more about the underlying tunnel technology
+- [File Serving](/features/file-serving) - Serve static files with similar tunneling
+
+## Technical Reference
+
+### Return Value
+
+The `createWebhookServer` function returns:
+
+```typescript
+{
+  token: string;      // UUID for WebSocket authentication
+  port: number;       // Local port the server is listening on
+  kill: () => void;   // Function to stop the server
+}
+```
+
+### Dependencies
+
+- **Elysia**: Fast web framework
+- **@elysiajs/cors**: CORS middleware
+- **WebSocket**: For real-time request streaming
+- **Cloudflare tunnel**: For public URL generation
