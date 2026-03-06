@@ -1,0 +1,82 @@
+{
+  "projectType": "cli-tool",
+  "projectName": "Ahh CLI",
+  "projectDescription": "A powerful CLI tool for CTF competitions with tunneling, webhooks, and workspace management.",
+  "theme": "aspen",
+  "primaryColor": "#7c7c7c",
+  "lightColor": "#040404",
+  "darkColor": "#d6d6d6",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/tunneling",
+              "features/webhook-server",
+              "features/file-serving",
+              "features/workspace-management"
+            ]
+          },
+          {
+            "group": "Commands",
+            "pages": [
+              "commands/tunnel",
+              "commands/serve",
+              "commands/webhook",
+              "commands/workspace",
+              "commands/clip",
+              "commands/qr",
+              "commands/share-discord",
+              "commands/update"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/config-file",
+              "configuration/discord-webhooks"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "advanced/troubleshooting",
+              "advanced/shell-completions"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Cloudflare tunnel integration for exposing local ports",
+    "Built-in webhook server with web interface",
+    "HTTP file server with automatic tunneling",
+    "QR code generation for easy URL sharing",
+    "Discord webhook integration for CTF collaboration",
+    "Clipboard utilities for quick data sharing",
+    "Pre-configured workspace templates for common CTF challenges",
+    "Automatic updates via built-in update command"
+  ],
+  "publicApiSurface": [
+    "ahh tunnel --port <port>",
+    "ahh serve [--port <port>]",
+    "ahh webhook",
+    "ahh workspace <name> [--path <path>]",
+    "ahh clip",
+    "ahh qr",
+    "ahh share-discord [--configure]",
+    "ahh update"
+  ]
+}
